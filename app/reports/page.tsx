@@ -54,9 +54,115 @@ export default function ReportsPage() {
     }
   }
 
-  const handleExport = (reportType: string) => {
-    console.log(`Exporting ${reportType} report...`)
-    // In production, implement actual export functionality
+  const handleExport = async (reportType: string) => {
+    try {
+      console.log(`Starting export for ${reportType}...`)
+      const token = localStorage.getItem("erp_token")
+
+      if (!token) {
+        console.error('No authentication token found')
+        return
+      }
+
+      const response = await fetch(`/api/reports/export?type=${reportType}&format=csv`, {
+        method: 'GET',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      console.log(`Export response status: ${response.status}`)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Export failed with status ${response.status}:`, errorText)
+        throw new Error(`Export failed: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      console.log(`Blob size: ${blob.size} bytes`)
+
+      if (blob.size === 0) {
+        console.error('Received empty blob')
+        throw new Error('No data to export')
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `manufacturing-${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`
+      link.style.display = 'none'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url)
+
+      console.log(`Export completed successfully for ${reportType}`)
+
+    } catch (error) {
+      console.error(`Export ${reportType} report error:`, error)
+      // You could show a toast notification here
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleExportAll = async () => {
+    try {
+      console.log('Starting export for all reports...')
+      const token = localStorage.getItem("erp_token")
+
+      if (!token) {
+        console.error('No authentication token found')
+        return
+      }
+
+      const response = await fetch('/api/reports/export?type=all&format=csv', {
+        method: 'GET',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      console.log(`Export all response status: ${response.status}`)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Export all failed with status ${response.status}:`, errorText)
+        throw new Error(`Export failed: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      console.log(`Blob size: ${blob.size} bytes`)
+
+      if (blob.size === 0) {
+        console.error('Received empty blob')
+        throw new Error('No data to export')
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `manufacturing-all-reports-${new Date().toISOString().split('T')[0]}.csv`
+      link.style.display = 'none'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url)
+
+      console.log('Export all completed successfully')
+
+    } catch (error) {
+      console.error('Export all reports error:', error)
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   if (loading) {
@@ -114,7 +220,7 @@ export default function ReportsPage() {
               <Filter className="mr-2 h-4 w-4" />
               Filters
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportAll}>
               <Download className="mr-2 h-4 w-4" />
               Export All
             </Button>
@@ -254,7 +360,7 @@ export default function ReportsPage() {
                   </div>
                   <Button variant="outline" onClick={() => handleExport("production")}>
                     <Download className="mr-2 h-4 w-4" />
-                    Export
+                    Export Production
                   </Button>
                 </div>
               </CardHeader>
@@ -336,7 +442,7 @@ export default function ReportsPage() {
                   </div>
                   <Button variant="outline" onClick={() => handleExport("inventory")}>
                     <Download className="mr-2 h-4 w-4" />
-                    Export
+                    Export Inventory
                   </Button>
                 </div>
               </CardHeader>
@@ -393,7 +499,7 @@ export default function ReportsPage() {
                   </div>
                   <Button variant="outline" onClick={() => handleExport("efficiency")}>
                     <Download className="mr-2 h-4 w-4" />
-                    Export
+                    Export Efficiency
                   </Button>
                 </div>
               </CardHeader>

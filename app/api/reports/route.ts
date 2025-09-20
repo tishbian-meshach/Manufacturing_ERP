@@ -55,7 +55,13 @@ export async function GET(request: NextRequest) {
       LEFT JOIN work_orders wo ON wc.id = wo.work_center_id AND wo.company_id = ${userCompanyId}
       WHERE wc.company_id = ${userCompanyId}
       GROUP BY wc.id, wc.name, wc.capacity_per_hour
-      ORDER BY utilization DESC
+      ORDER BY ROUND(
+        CASE
+          WHEN wc.capacity_per_hour > 0 THEN
+            LEAST(100, (COUNT(DISTINCT CASE WHEN wo.status IN ('in_progress', 'completed') THEN wo.id END) * 8 * 100.0) / (wc.capacity_per_hour * 168))
+          ELSE 0
+        END, 1
+      ) DESC
     `
 
     // Get inventory report
