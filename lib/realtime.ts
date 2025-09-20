@@ -26,6 +26,7 @@ class RealtimeService {
   private intervalId: NodeJS.Timeout | null = null
 
   constructor() {
+    this.addInitialNotifications()
     this.startMockUpdates()
   }
 
@@ -38,6 +39,39 @@ class RealtimeService {
 
   private broadcast(update: RealtimeUpdate) {
     this.listeners.forEach((listener) => listener(update))
+  }
+
+  private addInitialNotifications() {
+    // Add some initial notifications to show immediately
+    const initialNotifications: Notification[] = [
+      {
+        id: "welcome-1",
+        type: "info",
+        title: "Welcome to Manufacturing ERP",
+        message: "Your manufacturing operations dashboard is ready",
+        timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+        read: false,
+      },
+      {
+        id: "system-1",
+        type: "success",
+        title: "System Status",
+        message: "All manufacturing systems are operating normally",
+        timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
+        read: false,
+      },
+      {
+        id: "inventory-1",
+        type: "warning",
+        title: "Inventory Alert",
+        message: "5 items are running low on stock",
+        timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+        read: false,
+        actionUrl: "/inventory",
+      },
+    ]
+
+    this.notifications = initialNotifications
   }
 
   private startMockUpdates() {

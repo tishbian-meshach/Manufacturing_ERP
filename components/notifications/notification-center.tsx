@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -39,12 +39,44 @@ export function NotificationCenter() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useRealtimeUpdates()
   const [isOpen, setIsOpen] = useState(false)
 
+  console.log("NotificationCenter render:", { notifications: notifications.length, unreadCount, isOpen })
+
   const handleNotificationClick = (notification: Notification) => {
+    console.log("Notification clicked:", notification.id)
     if (!notification.read) {
       markAsRead(notification.id)
     }
     setIsOpen(false)
   }
+
+  const handleOpenChange = (open: boolean) => {
+    console.log("Dropdown open change:", open)
+    setIsOpen(open)
+  }
+
+  // Close dropdown when clicking outside or pressing escape
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (isOpen && !target.closest('.notification-dropdown')) {
+        setIsOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen])
 
   const formatTime = (timestamp: Date) => {
     const now = new Date()
@@ -60,82 +92,88 @@ export function NotificationCenter() {
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </Badge>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 bg-sidebar" align="end" forceMount>
-        <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold">Notifications</h4>
-          <div className="flex gap-2">
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-                <CheckCheck className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </div>
+    <div className="relative notification-dropdown">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="relative"
+        onClick={() => handleOpenChange(!isOpen)}
+      >
+        <Bell className="h-4 w-4" />
+        {unreadCount > 0 && (
+          <Badge
+            variant="destructive"
+            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </Badge>
+        )}
+      </Button>
 
-        <ScrollArea className="h-96 bg-sidebar">
-          {notifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No notifications yet</p>
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 notification-dropdown">
+          <div className="flex items-center justify-between p-4 border-b border-b-gray-200">
+            <h4 className="font-semibold">Notifications</h4>
+            <div className="flex gap-2">
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                  <CheckCheck className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-          ) : (
-            <div className="p-2">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 mb-2 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
-                    !notification.read ? getNotificationBg(notification.type) : "bg-background"
-                  }`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-3">
-                    {getNotificationIcon(notification.type)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium truncate">{notification.title}</p>
-                        {!notification.read && <div className="h-2 w-2 bg-blue-500 rounded-full flex-shrink-0" />}
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">{notification.message}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">{formatTime(notification.timestamp)}</span>
-                        {notification.actionUrl && (
-                          <Link href={notification.actionUrl}>
-                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                              View
-                            </Button>
-                          </Link>
-                        )}
+          </div>
+
+          <div className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No notifications yet</p>
+              </div>
+            ) : (
+              <div className="p-2">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-3 mb-2 rounded-lg border cursor-pointer transition-colors hover:bg-gray-50 ${
+                      !notification.read ? getNotificationBg(notification.type) : "bg-white"
+                    }`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex items-start gap-3">
+                      {getNotificationIcon(notification.type)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-medium truncate">{notification.title}</p>
+                          {!notification.read && <div className="h-2 w-2 bg-blue-500 rounded-full flex-shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{notification.message}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">{formatTime(notification.timestamp)}</span>
+                          {notification.actionUrl && (
+                            <Link href={notification.actionUrl}>
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                                View
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {notifications.length > 0 && (
+            <div className="p-2 border-t border-t-gray-200">
+              <Button variant="ghost" className="w-full text-sm" onClick={() => handleOpenChange(false)}>
+                View All Notifications
+              </Button>
             </div>
           )}
-        </ScrollArea>
-
-        {notifications.length > 0 && (
-          <div className="p-2 border-t">
-            <Button variant="ghost" className="w-full text-sm" onClick={() => setIsOpen(false)}>
-              View All Notifications
-            </Button>
-          </div>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </div>
+      )}
+    </div>
   )
 }

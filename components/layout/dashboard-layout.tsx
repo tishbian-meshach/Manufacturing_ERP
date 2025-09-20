@@ -57,7 +57,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-visible">
       <Header user={user} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar userRole={user.role} />
