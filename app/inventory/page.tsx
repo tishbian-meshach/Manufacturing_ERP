@@ -8,7 +8,15 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Search, Package, AlertTriangle, TrendingDown, Eye, Edit, History, Loader2 } from "lucide-react"
+import { Plus, Search, Package, AlertTriangle, TrendingDown, Loader2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -112,6 +120,73 @@ export default function InventoryPage() {
 
   const totalValue = items.reduce((sum, item) => sum + item.current_stock * Number(item.standard_rate || 0), 0)
 
+
+  // Add Stock Dialog State
+  const [isAddStockOpen, setIsAddStockOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [stockQuantity, setStockQuantity] = useState("")
+  const [stockRate, setStockRate] = useState("")
+  const [addingStock, setAddingStock] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const handleAddStock = (item: Item) => {
+    setSelectedItem(item)
+    setStockQuantity("")
+    setStockRate(item.standard_rate?.toString() || "")
+    setIsAddStockOpen(true)
+  }
+
+  const handleAddStockSubmit = async () => {
+    if (!selectedItem || !stockQuantity || !stockRate) {
+      setError("All fields are required")
+      return
+    }
+
+    try {
+      setAddingStock(true)
+      const token = localStorage.getItem("erp_token")
+
+      const response = await fetch("/api/stock-ledger", {
+        method: "POST",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          item_id: selectedItem.id,
+          actual_qty: parseFloat(stockQuantity),
+          rate: parseFloat(stockRate),
+          posting_date: new Date().toISOString().split('T')[0],
+          posting_time: new Date().toTimeString().split(' ')[0]
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add stock")
+      }
+
+      // Show success message
+      setSuccessMessage("Stock added successfully!")
+
+      // Reset form
+      setSelectedItem(null)
+      setStockQuantity("")
+      setStockRate("")
+      setIsAddStockOpen(false)
+
+      // Refresh data
+      await fetchItems()
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(""), 3000)
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add stock")
+    } finally {
+      setAddingStock(false)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -120,6 +195,11 @@ export default function InventoryPage() {
           <div>
             <h1 className="text-3xl font-bold">Inventory Management</h1>
             <p className="text-muted-foreground">Track stock levels and manage inventory items</p>
+            {successMessage && (
+              <div className="mt-2 p-2 bg-green-100 border border-green-400 text-green-700 rounded">
+                {successMessage}
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Link href="/inventory/bom">
@@ -133,6 +213,74 @@ export default function InventoryPage() {
             </Link>
           </div>
         </div>
+
+        {/* Add Stock Dialog */}
+        <Dialog open={isAddStockOpen} onOpenChange={setIsAddStockOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add Stock to Inventory</DialogTitle>
+              <DialogDescription>
+                Add stock to {selectedItem?.item_name} ({selectedItem?.item_code})
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity" className="text-sm font-medium">
+                    Quantity
+                  </Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="Enter quantity"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rate" className="text-sm font-medium">
+                    Rate (₹)
+                  </Label>
+                  <Input
+                    id="rate"
+                    type="number"
+                    step="0.01"
+                    placeholder="Auto-filled from item"
+                    value={stockRate}
+                    onChange={(e) => setStockRate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsAddStockOpen(false)}
+                disabled={addingStock}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddStockSubmit} disabled={addingStock}>
+                {addingStock ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Package className="mr-2 h-4 w-4" />
+                    Add Stock
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
@@ -275,14 +423,13 @@ export default function InventoryPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <History className="h-4 w-4" />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleAddStock(item)}
+                                title="Add stock to this item"
+                              >
+                                <Plus className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>

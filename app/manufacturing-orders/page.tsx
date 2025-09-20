@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Eye, Edit, Trash2, Loader2 } from "lucide-react"
+import { Plus, Search, Trash2, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -229,6 +229,7 @@ export default function ManufacturingOrdersPage() {
     )
   }
 
+
   const handleDeleteMO = async (moId: number, moNumber: string) => {
     if (!confirm(`Are you sure you want to cancel Manufacturing Order ${moNumber}? This action cannot be undone.`)) {
       return
@@ -364,12 +365,6 @@ export default function ManufacturingOrdersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

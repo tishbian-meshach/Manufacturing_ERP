@@ -32,8 +32,6 @@ import {
 import {
   Plus,
   Search,
-  Eye,
-  Edit,
   Trash2,
   Package,
   ArrowLeft,
@@ -300,16 +298,6 @@ export default function BOMPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(bom.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Play, Pause, CheckCircle, Eye, Edit, Clock, RefreshCw, Settings, RotateCcw } from "lucide-react"
+import { Plus, Search, Play, Pause, CheckCircle, Clock, RefreshCw, Settings, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -422,6 +422,7 @@ export default function WorkOrdersPage() {
     }
   }
 
+
   const handleStatusChange = async (woId: number, newStatus: string) => {
     try {
       const token = localStorage.getItem("erp_token")
@@ -744,12 +745,6 @@ export default function WorkOrdersPage() {
                             <Play className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

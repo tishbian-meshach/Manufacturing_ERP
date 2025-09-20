@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Search, Edit, Trash2, Factory, TrendingUp } from "lucide-react"
+import { Plus, Search, Trash2, Factory, TrendingUp } from "lucide-react"
 
 interface WorkCenter {
   id: number
@@ -136,6 +136,39 @@ export default function WorkCentersPage() {
     activeWorkCenters.length > 0
       ? Math.round(activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.utilization_percentage || 0), 0) / activeWorkCenters.length)
       : 0
+
+
+  const handleDeleteWorkCenter = async (wc: WorkCenter) => {
+    if (!confirm(`Are you sure you want to delete Work Center "${wc.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("erp_token")
+      const response = await fetch("/api/workcenters", {
+        method: "DELETE",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: wc.id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete work center")
+      }
+
+      // Refresh the work centers list
+      await fetchWorkCenters()
+
+      // Show success message
+      alert(`Work center "${wc.name}" has been deleted successfully.`)
+    } catch (error) {
+      console.error("Error deleting work center:", error)
+      alert(error instanceof Error ? error.message : "Failed to delete work center")
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -315,10 +348,13 @@ export default function WorkCentersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600"
+                          onClick={() => handleDeleteWorkCenter(wc)}
+                          title="Delete work center"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
