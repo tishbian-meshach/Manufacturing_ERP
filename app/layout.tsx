@@ -9,7 +9,7 @@ const geistMono = GeistMono
 
 export const metadata: Metadata = {
   title: "Manufacturing ERP",
-  description: "A comprehensive manufacturing ERP system for managing orders, inventory, and operations",
+  description: "A Comprehensive Manufacturing ERP system for managing orders, inventory, and operations",
     generator: 'v0.app'
 }
 
