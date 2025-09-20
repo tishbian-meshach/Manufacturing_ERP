@@ -28,7 +28,7 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed")
       }
 
-      // Store JWT token and user data
+      // Store JWT token, user data, and company details
       localStorage.setItem("erp_token", data.token)
       localStorage.setItem(
         "erp_user",
@@ -40,6 +40,7 @@ export default function LoginPage() {
           companyId: data.user.companyId,
         }),
       )
+      localStorage.setItem("erp_company", JSON.stringify(data.company))
 
       // Redirect to dashboard
       router.push("/dashboard")

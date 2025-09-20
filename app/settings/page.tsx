@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { RoleGuard } from "@/components/auth/role-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -130,18 +131,21 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-xl text-muted-foreground font-medium">Loading settings data...</p>
-          <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch your profile information</p>
+      <RoleGuard allowedRoles={["admin", "manager"]}>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-xl text-muted-foreground font-medium">Loading settings data...</p>
+            <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch your profile information</p>
+          </div>
         </div>
-      </div>
+      </RoleGuard>
     )
   }
 
   return (
-    <DashboardLayout>
+    <RoleGuard allowedRoles={["admin", "manager"]}>
+      <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -218,5 +222,6 @@ export default function SettingsPage() {
         </Card>
       </div>
     </DashboardLayout>
+    </RoleGuard>
   )
 }

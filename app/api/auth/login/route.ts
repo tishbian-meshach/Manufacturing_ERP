@@ -25,6 +25,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
+    // Get company details
+    const companies = await sql`
+      SELECT id, name, domain
+      FROM companies
+      WHERE id = ${user.company_id}
+    `
+
+    const company = companies.length > 0 ? companies[0] : null
+
     // Create JWT token (companyId will be fetched from DB in auth middleware)
     const token = jwt.sign(
       {
@@ -43,7 +52,9 @@ export async function POST(request: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
+        companyId: user.company_id,
       },
+      company,
     })
   } catch (error) {
     console.error("Login error:", error)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { RoleGuard } from "@/components/auth/role-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -175,7 +176,8 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <RoleGuard allowedRoles={["admin", "manager"]}>
+        <DashboardLayout>
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Reports & Analytics</h1>
@@ -191,31 +193,35 @@ export default function ReportsPage() {
           </div>
         </div>
       </DashboardLayout>
+      </RoleGuard>
     )
   }
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-            <p className="text-muted-foreground">Comprehensive insights into manufacturing performance</p>
+      <RoleGuard allowedRoles={["admin", "manager"]}>
+        <DashboardLayout>
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+              <p className="text-muted-foreground">Comprehensive insights into manufacturing performance</p>
+            </div>
+            <div className="text-center py-12">
+              <div className="text-red-500 text-lg font-medium">Error loading reports</div>
+              <div className="text-muted-foreground mt-2">{error}</div>
+              <Button onClick={fetchReportsData} className="mt-4">
+                Try Again
+              </Button>
+            </div>
           </div>
-          <div className="text-center py-12">
-            <div className="text-red-500 text-lg font-medium">Error loading reports</div>
-            <div className="text-muted-foreground mt-2">{error}</div>
-            <Button onClick={fetchReportsData} className="mt-4">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </DashboardLayout>
+        </DashboardLayout>
+      </RoleGuard>
     )
   }
 
   return (
-    <DashboardLayout>
+    <RoleGuard allowedRoles={["admin", "manager"]}>
+      <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -573,5 +579,6 @@ export default function ReportsPage() {
         </Tabs>
       </div>
     </DashboardLayout>
+    </RoleGuard>
   )
 }

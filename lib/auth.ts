@@ -95,3 +95,18 @@ export function getCurrentUser(): User | null {
   }
   return null;
 }
+
+// Utility function to get current company
+export function getCurrentCompany(): { id: string; name: string; domain: string } | null {
+  if (typeof window === 'undefined') return null; // Server-side
+
+  try {
+    const companyData = localStorage.getItem('erp_company');
+    if (companyData) {
+      return JSON.parse(companyData);
+    }
+  } catch (error) {
+    console.error('Error getting current company:', error);
+  }
+  return null;
+}

@@ -84,20 +84,7 @@ export function LoginForm({ onLogin, isLoading = false, error }: LoginFormProps)
           </p>
         </div>
 
-        <div className="mt-6 text-sm text-muted-foreground">
-          <p className="font-medium mb-2">Demo Accounts:</p>
-          <div className="space-y-1">
-            <p>
-              <strong>Admin:</strong> admin@company.com / admin123
-            </p>
-            <p>
-              <strong>Manager:</strong> manager@company.com / manager123
-            </p>
-            <p>
-              <strong>Operator:</strong> operator1@company.com / operator123
-            </p>
-          </div>
-        </div>
+        
       </CardContent>
     </Card>
   )

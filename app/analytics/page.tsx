@@ -1,10 +1,12 @@
 import { DelayPrediction } from "@/components/advanced/delay-prediction"
 import { PerformanceAnalytics } from "@/components/advanced/performance-analytics"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { RoleGuard } from "@/components/auth/role-guard"
 
 export default function AnalyticsPage() {
   return (
-    <DashboardLayout>
+    <RoleGuard allowedRoles={["admin", "manager"]}>
+      <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Advanced Analytics</h1>
@@ -19,5 +21,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </DashboardLayout>
+    </RoleGuard>
   )
 }

@@ -14,6 +14,12 @@ interface User {
   role: string
 }
 
+interface Company {
+  id: string
+  name: string
+  domain: string
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
