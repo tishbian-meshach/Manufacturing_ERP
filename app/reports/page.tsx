@@ -194,7 +194,7 @@ export default function ReportsPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${((reportsData?.summary?.totalRevenue || 0) / 1000).toFixed(0)}K</div>
+                  <div className="text-2xl font-bold">₹{((reportsData?.summary?.totalRevenue || 0) / 1000).toFixed(0)}K</div>
                   <p className="text-xs text-muted-foreground">From completed orders</p>
                 </CardContent>
               </Card>
@@ -271,7 +271,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="item" />
                       <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
                       <Bar dataKey="planned" fill="#8884d8" name="Planned" />
                       <Bar dataKey="produced" fill="#82ca9d" name="Produced" />
                     </BarChart>
@@ -316,7 +316,7 @@ export default function ReportsPage() {
                             {item.efficiency}%
                           </span>
                         </TableCell>
-                        <TableCell>${item.revenue.toLocaleString()}</TableCell>
+                        <TableCell>₹{item.revenue.toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -370,7 +370,7 @@ export default function ReportsPage() {
                           <TableCell>
                             {item.minStock} / {item.maxStock}
                           </TableCell>
-                          <TableCell>${item.value.toLocaleString()}</TableCell>
+                          <TableCell>₹{item.value.toLocaleString()}</TableCell>
                           <TableCell>{item.turnover}x</TableCell>
                           <TableCell className={statusColor}>{status}</TableCell>
                         </TableRow>

@@ -174,7 +174,7 @@ export default function NewItemPage() {
 
                 {/* Standard Rate */}
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="standard_rate">Standard Rate ($) *</Label>
+                  <Label htmlFor="standard_rate">Standard Rate (₹) *</Label>
                   <Input
                     id="standard_rate"
                     name="standard_rate"

@@ -15,15 +15,25 @@ export async function GET(request: NextRequest) {
 
     const userCompanyId = authResult.user.companyId
 
-    // Get all BOMs for the user's company
+    // Get all BOMs for the user's company with component counts
     const boms = await sql`
       SELECT
-        b.*,
+        b.id,
+        b.bom_name,
+        b.item_id,
+        b.quantity,
+        b.is_active,
+        b.total_cost,
+        b.created_at,
+        b.updated_at,
         i.item_name,
-        i.item_code
+        i.item_code,
+        COUNT(bi.id) as actual_components_count
       FROM bom b
       LEFT JOIN items i ON b.item_id = i.id AND i.company_id = ${userCompanyId}
+      LEFT JOIN bom_items bi ON b.id = bi.bom_id AND bi.company_id = ${userCompanyId}
       WHERE b.company_id = ${userCompanyId} AND b.is_active = true
+      GROUP BY b.id, b.bom_name, b.item_id, b.quantity, b.is_active, b.total_cost, b.created_at, b.updated_at, i.item_name, i.item_code
       ORDER BY b.bom_name
     `
 
@@ -52,10 +62,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
     }
 
-    // Create BOM
+    // Calculate total cost from components
+    let totalCost = 0
+    for (const component of components) {
+      const itemRate = await sql`
+        SELECT standard_rate FROM items
+        WHERE id = ${component.item_id} AND company_id = ${userCompanyId}
+      `
+      if (itemRate[0]) {
+        totalCost += component.quantity * Number(itemRate[0].standard_rate || 0)
+      }
+    }
+
+    // Create BOM with calculated total cost
     const newBom = await sql`
-      INSERT INTO bom (bom_name, item_id, quantity, company_id, is_active, created_at, updated_at)
-      VALUES (${bom_name}, ${item_id}, ${quantity}, ${userCompanyId}, true, NOW(), NOW())
+      INSERT INTO bom (bom_name, item_id, quantity, total_cost, company_id, is_active, created_at, updated_at)
+      VALUES (${bom_name}, ${item_id}, ${quantity}, ${totalCost}, ${userCompanyId}, true, NOW(), NOW())
       RETURNING id
     `
 

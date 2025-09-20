@@ -153,7 +153,7 @@ export default function InventoryPage() {
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">₹{totalValue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Current inventory value</p>
             </CardContent>
           </Card>
@@ -266,8 +266,8 @@ export default function InventoryPage() {
                           </TableCell>
                           <TableCell className={stockStatus.color}>{item.current_stock.toLocaleString()}</TableCell>
                           <TableCell>{item.unit_of_measure}</TableCell>
-                          <TableCell>${Number(item.standard_rate || 0).toFixed(2)}</TableCell>
-                          <TableCell>${(item.current_stock * Number(item.standard_rate || 0)).toLocaleString()}</TableCell>
+                          <TableCell>₹{Number(item.standard_rate || 0).toFixed(2)}</TableCell>
+                          <TableCell>₹{(item.current_stock * Number(item.standard_rate || 0)).toLocaleString()}</TableCell>
                           <TableCell>
                             <Badge variant={stockStatus.status === "good" ? "default" : "destructive"}>
                               {stockStatus.status}

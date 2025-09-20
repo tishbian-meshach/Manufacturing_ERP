@@ -1,86 +1,141 @@
-"use client"
+"use client";
 
-import { Label } from "@/components/ui/label"
+import { Label } from "@/components/ui/label";
 
-import { useState, useEffect } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Search, Eye, Edit, Trash2, Package, ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Plus,
+  Search,
+  Eye,
+  Edit,
+  Trash2,
+  Package,
+  ArrowLeft,
+} from "lucide-react";
+import Link from "next/link";
 
 interface BOM {
-  id: number
-  bom_name: string
-  item_code: string
-  item_name: string
-  quantity: number
-  is_active: boolean
-  components_count?: number
-  total_cost?: number
-  created_at: string
+  id: number;
+  bom_name: string;
+  item_code: string;
+  item_name: string;
+  quantity: number;
+  is_active: boolean;
+  components_count?: number;
+  total_cost: number;
+  created_at: string;
+  actual_components_count?: number;
 }
 
 interface BOMComponent {
-  item_code: string
-  item_name: string
-  quantity: number
-  unit: string
-  rate: number
-  current_stock: number
+  item_code: string;
+  item_name: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  current_stock: number;
 }
 
 export default function BOMPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [boms, setBoms] = useState<BOM[]>([])
-  const [selectedBOM, setSelectedBOM] = useState<number | null>(null)
-  const [bomComponents, setBomComponents] = useState<BOMComponent[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [boms, setBoms] = useState<BOM[]>([]);
+  const [selectedBOM, setSelectedBOM] = useState<number | null>(null);
+  const [bomComponents, setBomComponents] = useState<BOMComponent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isLoadingComponents, setIsLoadingComponents] = useState(false);
 
   useEffect(() => {
-    fetchBOMs()
-  }, [])
+    fetchBOMs();
+  }, []);
 
   const fetchBOMs = async () => {
     try {
-      const token = localStorage.getItem("erp_token")
+      const token = localStorage.getItem("erp_token");
       const response = await fetch("/api/boms", {
         headers: {
-          "Authorization": token ? `Bearer ${token}` : "",
+          Authorization: token ? `Bearer ${token}` : "",
           "Content-Type": "application/json",
         },
-      })
+      });
       if (!response.ok) {
-        throw new Error("Failed to fetch BOMs")
+        throw new Error("Failed to fetch BOMs");
       }
-      const data = await response.json()
-      setBoms(data)
+      const data = await response.json();
+      console.log("BOM API Response:", data);
+      console.log("Sample BOM data:", data.slice(0, 3));
+      setBoms(data);
     } catch (err) {
-      console.error("Error fetching BOMs:", err)
+      console.error("Error fetching BOMs:", err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const filteredBOMs = boms.filter(
     (bom) =>
       bom.bom_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bom.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bom.item_code.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      bom.item_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleViewDetails = (bomId: number) => {
-    setSelectedBOM(bomId)
-    setIsDetailsOpen(true)
-  }
+  const handleViewDetails = async (bomId: number) => {
+    setSelectedBOM(bomId);
+    setIsDetailsOpen(true);
+    setIsLoadingComponents(true);
 
-  const selectedBOMData = selectedBOM ? boms.find((b: BOM) => b.id === selectedBOM) : null
-  const selectedBomComponents = selectedBOM ? [] : [] // TODO: Implement BOM details API
+    try {
+      const token = localStorage.getItem("erp_token");
+      const response = await fetch(`/api/boms/${bomId}/components`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch BOM components");
+      }
+
+      const data = await response.json();
+      setBomComponents(data.components);
+    } catch (err) {
+      console.error("Error fetching BOM components:", err);
+      setBomComponents([]);
+    } finally {
+      setIsLoadingComponents(false);
+    }
+  };
+
+  const selectedBOMData = selectedBOM
+    ? boms.find((b: BOM) => b.id === selectedBOM)
+    : null;
 
   return (
     <DashboardLayout>
@@ -88,10 +143,11 @@ export default function BOMPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            
             <div>
               <h1 className="text-3xl font-bold">Bill of Materials (BOM)</h1>
-              <p className="text-muted-foreground">Manage product component structures and recipes</p>
+              <p className="text-muted-foreground">
+                Manage product component structures and recipes
+              </p>
             </div>
           </div>
           <Link href="/inventory/bom/new">
@@ -111,33 +167,67 @@ export default function BOMPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{boms.length}</div>
-              <p className="text-xs text-muted-foreground">Active bill of materials</p>
+              <p className="text-xs text-muted-foreground">
+                Active bill of materials
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Components</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Average Components
+              </CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {boms.length > 0 ? Math.round(boms.reduce((sum: number, bom: BOM) => sum + (bom.components_count || 0), 0) / boms.length) : 0}
+                {(() => {
+                  if (boms.length === 0) return "0.00";
+
+                  const sum = boms.reduce((acc: number, bom: BOM) => {
+                    const count = Number(
+                      bom.actual_components_count ?? bom.components_count ?? 0
+                    );
+                    return acc + count;
+                  }, 0);
+
+                  const average = sum / boms.length;
+
+                  // If number is too huge, cap it
+                  if (!isFinite(average)) return "0.00";
+
+                  return average.toFixed(2);
+                })()}
               </div>
-              <p className="text-xs text-muted-foreground">Components per BOM</p>
+
+              <p className="text-xs text-muted-foreground">
+                Components per BOM
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total BOM Value</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total BOM Value
+              </CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${boms.reduce((sum: number, bom: BOM) => sum + (bom.total_cost || 0), 0).toFixed(2)}
+                ₹
+                {boms
+                  .reduce(
+                    (sum: number, bom: BOM) =>
+                      sum + Number(bom.total_cost || 0),
+                    0
+                  )
+                  .toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">Combined material cost</p>
+              <p className="text-xs text-muted-foreground">
+                Combined material cost
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -164,7 +254,9 @@ export default function BOMPage() {
         <Card>
           <CardHeader>
             <CardTitle>Bill of Materials ({filteredBOMs.length})</CardTitle>
-            <CardDescription>List of all BOMs with their component details</CardDescription>
+            <CardDescription>
+              List of all BOMs with their component details
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -182,16 +274,25 @@ export default function BOMPage() {
               <TableBody>
                 {filteredBOMs.map((bom) => (
                   <TableRow key={bom.id}>
-                    <TableCell className="font-medium">{bom.bom_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {bom.bom_name}
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{bom.item_name}</div>
-                        <div className="text-sm text-muted-foreground">{bom.item_code}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {bom.item_code}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{bom.quantity}</TableCell>
-                    <TableCell>{bom.components_count} items</TableCell>
-                    <TableCell>${(bom.total_cost || 0).toFixed(2)}</TableCell>
+                    <TableCell>
+                      {bom.actual_components_count || bom.components_count || 0}{" "}
+                      items
+                    </TableCell>
+                    <TableCell>
+                      ₹{Number(bom.total_cost || 0).toFixed(2)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={bom.is_active ? "default" : "secondary"}>
                         {bom.is_active ? "Active" : "Inactive"}
@@ -199,13 +300,21 @@ export default function BOMPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(bom.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(bom.id)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -222,7 +331,10 @@ export default function BOMPage() {
           <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>{selectedBOMData?.bom_name}</DialogTitle>
-              <DialogDescription>Components and materials required for {selectedBOMData?.item_name}</DialogDescription>
+              <DialogDescription>
+                Components and materials required for{" "}
+                {selectedBOMData?.item_name}
+              </DialogDescription>
             </DialogHeader>
 
             {selectedBOMData && (
@@ -240,7 +352,9 @@ export default function BOMPage() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Total Cost</Label>
-                    <p>${(selectedBOMData.total_cost || 0).toFixed(2)}</p>
+                    <p>
+                      ₹{Number(selectedBOMData?.total_cost || 0).toFixed(2)}
+                    </p>
                   </div>
                 </div>
 
@@ -260,26 +374,57 @@ export default function BOMPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bomComponents.map((component, index) => {
-                        const totalCost = component.quantity * component.rate
-                        const isAvailable = component.current_stock >= component.quantity
-                        return (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{component.item_code}</TableCell>
-                            <TableCell>{component.item_name}</TableCell>
-                            <TableCell>{component.quantity}</TableCell>
-                            <TableCell>{component.unit}</TableCell>
-                            <TableCell>${component.rate.toFixed(2)}</TableCell>
-                            <TableCell>${totalCost.toFixed(2)}</TableCell>
-                            <TableCell>{component.current_stock}</TableCell>
-                            <TableCell>
-                              <Badge variant={isAvailable ? "default" : "destructive"}>
-                                {isAvailable ? "Available" : "Shortage"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
+                      {isLoadingComponents ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-4">
+                            Loading components...
+                          </TableCell>
+                        </TableRow>
+                      ) : bomComponents.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-4">
+                            No components found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        bomComponents.map((component: any, index: number) => {
+                          const totalCost =
+                            component.required_quantity *
+                            Number(component.standard_rate || 0);
+                          const isAvailable =
+                            component.current_stock >=
+                            component.required_quantity;
+                          return (
+                            <TableRow key={component.id || index}>
+                              <TableCell className="font-medium">
+                                {component.item_code}
+                              </TableCell>
+                              <TableCell>{component.item_name}</TableCell>
+                              <TableCell>
+                                {component.required_quantity}
+                              </TableCell>
+                              <TableCell>{component.unit_of_measure}</TableCell>
+                              <TableCell>
+                                ₹
+                                {Number(component.standard_rate || 0).toFixed(
+                                  2
+                                )}
+                              </TableCell>
+                              <TableCell>₹{totalCost.toFixed(2)}</TableCell>
+                              <TableCell>{component.current_stock}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    isAvailable ? "default" : "destructive"
+                                  }
+                                >
+                                  {isAvailable ? "Available" : "Shortage"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -289,5 +434,5 @@ export default function BOMPage() {
         </Dialog>
       </div>
     </DashboardLayout>
-  )
+  );
 }

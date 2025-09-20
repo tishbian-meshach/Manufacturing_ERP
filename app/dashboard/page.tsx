@@ -309,7 +309,7 @@ export default function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${(stats.totalRevenue / 1000).toFixed(0)}K</div>
+              <div className="text-2xl font-bold">₹{(stats.totalRevenue / 1000).toFixed(0)}K</div>
               <p className="text-xs text-muted-foreground">+8.2% from last month</p>
             </CardContent>
           </Card>
@@ -331,7 +331,7 @@ export default function DashboardPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="production">Production</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="utilization">Utilization</TabsTrigger>
+            
             <TabsTrigger value="realtime">Real-time</TabsTrigger>
           </TabsList>
 
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartTooltip content={<ChartTooltipContent />} cursor={false}  />
                         <Bar dataKey="planned" fill="#8884d8" name="Planned" />
                         <Bar dataKey="actual" fill="#82ca9d" name="Actual" />
                       </BarChart>
@@ -604,33 +604,7 @@ export default function DashboardPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="utilization" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Work Center Utilization</CardTitle>
-                <CardDescription>Current utilization rates across all work centers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={{
-                    utilization: { label: "Utilization %", color: "#8884d8" },
-                  }}
-                  className="h-[400px]"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={charts?.workCenterUtilization || mockWorkCenterUtilization} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" domain={[0, 100]} />
-                      <YAxis dataKey="name" type="category" width={120} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="utilization" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
+          
           <TabsContent value="realtime" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-2">
               <ActivityFeed />

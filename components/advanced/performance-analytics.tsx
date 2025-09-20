@@ -256,7 +256,7 @@ export function PerformanceAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip cursor={{fill: 'transparent'}} />
                   <Bar dataKey="defectRate" fill="#ff7c7c" name="Defect Rate %" />
                   <Bar dataKey="reworkRate" fill="#ffa726" name="Rework Rate %" />
                 </BarChart>

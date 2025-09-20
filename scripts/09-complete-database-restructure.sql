@@ -257,24 +257,24 @@ INSERT INTO work_centers (name, description, capacity_per_hour, company_id) VALU
 ('Packaging Station', 'Final packaging and labeling', 15, 1),
 ('Raw Material Prep', 'Raw material preparation and cutting', 8, 1);
 
--- Insert items
+-- Insert items (converted to INR: 1 USD ≈ 83 INR)
 INSERT INTO items (item_code, item_name, description, unit_of_measure, item_type, standard_rate, company_id) VALUES
 -- Raw Materials
-('RM001', 'Steel Rod 10mm', '10mm diameter steel rod', 'meter', 'raw_material', 5.50, 1),
-('RM002', 'Aluminum Sheet', '2mm thick aluminum sheet', 'sqm', 'raw_material', 12.00, 1),
-('RM003', 'Plastic Pellets', 'High-grade plastic pellets', 'kg', 'raw_material', 3.25, 1),
-('RM004', 'Screws M6', 'M6 stainless steel screws', 'pcs', 'raw_material', 0.15, 1),
-('RM005', 'Paint - Blue', 'Industrial blue paint', 'liter', 'raw_material', 8.75, 1),
+('RM001', 'Steel Rod 10mm', '10mm diameter steel rod', 'meter', 'raw_material', 456.50, 1),
+('RM002', 'Aluminum Sheet', '2mm thick aluminum sheet', 'sqm', 'raw_material', 996.00, 1),
+('RM003', 'Plastic Pellets', 'High-grade plastic pellets', 'kg', 'raw_material', 269.75, 1),
+('RM004', 'Screws M6', 'M6 stainless steel screws', 'pcs', 'raw_material', 12.45, 1),
+('RM005', 'Paint - Blue', 'Industrial blue paint', 'liter', 'raw_material', 726.25, 1),
 
 -- Semi-finished goods
-('SF001', 'Machined Rod', 'Processed steel rod component', 'pcs', 'semi_finished', 15.00, 1),
-('SF002', 'Cut Aluminum Panel', 'Cut and shaped aluminum panel', 'pcs', 'semi_finished', 25.00, 1),
-('SF003', 'Molded Plastic Part', 'Injection molded plastic component', 'pcs', 'semi_finished', 8.50, 1),
+('SF001', 'Machined Rod', 'Processed steel rod component', 'pcs', 'semi_finished', 1245.00, 1),
+('SF002', 'Cut Aluminum Panel', 'Cut and shaped aluminum panel', 'pcs', 'semi_finished', 2075.00, 1),
+('SF003', 'Molded Plastic Part', 'Injection molded plastic component', 'pcs', 'semi_finished', 705.00, 1),
 
 -- Finished goods
-('FG001', 'Product A', 'Complete assembled product A', 'pcs', 'finished_good', 150.00, 1),
-('FG002', 'Product B', 'Complete assembled product B', 'pcs', 'finished_good', 200.00, 1),
-('FG003', 'Product C', 'Premium assembled product C', 'pcs', 'finished_good', 350.00, 1);
+('FG001', 'Product A', 'Complete assembled product A', 'pcs', 'finished_good', 12450.00, 1),
+('FG002', 'Product B', 'Complete assembled product B', 'pcs', 'finished_good', 16600.00, 1),
+('FG003', 'Product C', 'Premium assembled product C', 'pcs', 'finished_good', 29050.00, 1);
 
 -- Insert sample BOM with operations
 INSERT INTO bom (bom_name, item_id, quantity, company_id) VALUES
@@ -293,19 +293,19 @@ INSERT INTO bom_operations (bom_id, work_center_id, operation_name, operation_de
 ((SELECT id FROM bom WHERE bom_name = 'BOM for Product A'), (SELECT id FROM work_centers WHERE name = 'Quality Control'), 'Quality Check', 'Inspect assembled product', 30, 2, 1),
 ((SELECT id FROM bom WHERE bom_name = 'BOM for Product A'), (SELECT id FROM work_centers WHERE name = 'Packaging Station'), 'Packaging', 'Package final product', 20, 3, 1);
 
--- Insert initial stock
+-- Insert initial stock (converted to INR)
 INSERT INTO stock_ledger (item_id, voucher_type, voucher_no, actual_qty, qty_after_transaction, rate, value_after_transaction, company_id) VALUES
 -- Raw materials initial stock
-((SELECT id FROM items WHERE item_code = 'RM001'), 'stock_adjustment', 'INIT-001', 1000, 1000, 5.50, 5500.00, 1),
-((SELECT id FROM items WHERE item_code = 'RM002'), 'stock_adjustment', 'INIT-002', 500, 500, 12.00, 6000.00, 1),
-((SELECT id FROM items WHERE item_code = 'RM003'), 'stock_adjustment', 'INIT-003', 200, 200, 3.25, 650.00, 1),
-((SELECT id FROM items WHERE item_code = 'RM004'), 'stock_adjustment', 'INIT-004', 5000, 5000, 0.15, 750.00, 1),
-((SELECT id FROM items WHERE item_code = 'RM005'), 'stock_adjustment', 'INIT-005', 100, 100, 8.75, 875.00, 1),
+((SELECT id FROM items WHERE item_code = 'RM001'), 'stock_adjustment', 'INIT-001', 1000, 1000, 456.50, 456500.00, 1),
+((SELECT id FROM items WHERE item_code = 'RM002'), 'stock_adjustment', 'INIT-002', 500, 500, 996.00, 498000.00, 1),
+((SELECT id FROM items WHERE item_code = 'RM003'), 'stock_adjustment', 'INIT-003', 200, 200, 269.75, 53950.00, 1),
+((SELECT id FROM items WHERE item_code = 'RM004'), 'stock_adjustment', 'INIT-004', 5000, 5000, 12.45, 62250.00, 1),
+((SELECT id FROM items WHERE item_code = 'RM005'), 'stock_adjustment', 'INIT-005', 100, 100, 726.25, 72625.00, 1),
 
 -- Semi-finished goods initial stock
-((SELECT id FROM items WHERE item_code = 'SF001'), 'stock_adjustment', 'INIT-006', 50, 50, 15.00, 750.00, 1),
-((SELECT id FROM items WHERE item_code = 'SF002'), 'stock_adjustment', 'INIT-007', 30, 30, 25.00, 750.00, 1),
-((SELECT id FROM items WHERE item_code = 'SF003'), 'stock_adjustment', 'INIT-008', 80, 80, 8.50, 680.00, 1);
+((SELECT id FROM items WHERE item_code = 'SF001'), 'stock_adjustment', 'INIT-006', 50, 50, 1245.00, 62250.00, 1),
+((SELECT id FROM items WHERE item_code = 'SF002'), 'stock_adjustment', 'INIT-007', 30, 30, 2075.00, 62250.00, 1),
+((SELECT id FROM items WHERE item_code = 'SF003'), 'stock_adjustment', 'INIT-008', 80, 80, 705.00, 56400.00, 1);
 
 -- =====================================================
 -- COMPLETION MESSAGE
