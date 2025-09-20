@@ -192,14 +192,13 @@ export default function StockLedgerPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
-            <p className="text-lg text-muted-foreground">Loading stock ledger...</p>
-          </div>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-xl text-muted-foreground font-medium">Loading stock ledger data...</p>
+          <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch inventory transaction history</p>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 

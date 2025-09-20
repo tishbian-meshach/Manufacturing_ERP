@@ -310,14 +310,13 @@ export default function NewBOMPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
-            <p className="text-lg text-muted-foreground">Loading BOM data...</p>
-          </div>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-xl text-muted-foreground font-medium">Loading BOM form data...</p>
+          <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch items and work centers</p>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
