@@ -22,6 +22,25 @@ ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES c
 -- Add company_id to stock_ledger table
 ALTER TABLE stock_ledger ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE;
 
+-- Create settings table for application settings
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+    company_name TEXT,
+    company_domain TEXT,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    auto_backup BOOLEAN DEFAULT TRUE,
+    maintenance_mode BOOLEAN DEFAULT FALSE,
+    theme TEXT DEFAULT 'system',
+    language TEXT DEFAULT 'en',
+    timezone TEXT DEFAULT 'UTC',
+    date_format TEXT DEFAULT 'MM/DD/YYYY',
+    currency TEXT DEFAULT 'USD',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(company_id)
+);
+
 -- Create indexes for better performance on company-specific queries
 CREATE INDEX IF NOT EXISTS idx_work_centers_company_id ON work_centers(company_id);
 CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);

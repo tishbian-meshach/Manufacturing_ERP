@@ -122,7 +122,10 @@ export function Header({ user }: HeaderProps) {
                 </div>
               </div>
               <div className="py-1">
-                <button className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-100">
+                <button
+                  className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-100"
+                  onClick={() => router.push('/settings')}
+                >
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </button>

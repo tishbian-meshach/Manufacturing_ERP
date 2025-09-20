@@ -1,44 +1,95 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken } from "@/lib/auth-middleware"
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql } from "@/lib/db"
+import { verifyAuth } from "@/lib/auth-middleware"
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyToken(request)
+    const authResult = await verifyAuth(request)
     if (!authResult.success) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const userId = authResult.user?.userId
+    if (!authResult.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    const user = await sql`
-      SELECT u.id, u.name, u.email, u.role, u.company_id, c.name as company_name, c.domain
-      FROM users u
-      JOIN companies c ON u.company_id = c.id
-      WHERE u.id = ${userId}
+    const userCompanyId = authResult.user.companyId
+
+    // Get user details
+    const users = await sql`
+      SELECT id, name, email, role, created_at, updated_at
+      FROM users
+      WHERE id = ${authResult.user.userId} AND company_id = ${userCompanyId}
     `
 
-    if (user.length === 0) {
+    if (users.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const userData = user[0]
+    // Get company details
+    const companies = await sql`
+      SELECT id, name, domain, admin_id
+      FROM companies
+      WHERE id = ${userCompanyId}
+    `
+
+    const company = companies.length > 0 ? companies[0] : null
 
     return NextResponse.json({
-      user: {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        companyId: userData.company_id,
-        companyName: userData.company_name,
-        companyDomain: userData.domain,
-      },
+      user: users[0],
+      company: company,
     })
   } catch (error) {
     console.error("Get user error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const authResult = await verifyAuth(request)
+    if (!authResult.success) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!authResult.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userCompanyId = authResult.user.companyId
+    const { name, email } = await request.json()
+
+    if (!name || !email) {
+      return NextResponse.json({ error: "Name and email are required" }, { status: 400 })
+    }
+
+    // Check if email is already taken by another user
+    const emailCheck = await sql`
+      SELECT id FROM users WHERE email = ${email} AND id != ${authResult.user.userId}
+    `
+
+    if (emailCheck.length > 0) {
+      return NextResponse.json({ error: "Email already in use" }, { status: 400 })
+    }
+
+    // Update user
+    const updatedUser = await sql`
+      UPDATE users
+      SET name = ${name}, email = ${email}, updated_at = NOW()
+      WHERE id = ${authResult.user.userId} AND company_id = ${userCompanyId}
+      RETURNING id, name, email, role, created_at, updated_at
+    `
+
+    if (updatedUser.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      user: updatedUser[0],
+      message: "Profile updated successfully"
+    })
+  } catch (error) {
+    console.error("Update user error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
