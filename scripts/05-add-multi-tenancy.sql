@@ -22,6 +22,10 @@ ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES c
 -- Add company_id to stock_ledger table
 ALTER TABLE stock_ledger ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE;
 
+-- Make estimated_hours optional in mo_work_centers table
+ALTER TABLE mo_work_centers ALTER COLUMN estimated_hours DROP NOT NULL;
+ALTER TABLE mo_work_centers ALTER COLUMN estimated_hours SET DEFAULT NULL;
+
 -- Create settings table for application settings
 CREATE TABLE IF NOT EXISTS settings (
     id SERIAL PRIMARY KEY,

@@ -106,6 +106,10 @@ export default function ManufacturingOrdersPage() {
       }
 
       const data = await response.json()
+      console.log("Fetched manufacturing orders after refresh:")
+      data.forEach((mo: ManufacturingOrder) => {
+        console.log(`MO ${mo.mo_number}: status=${mo.status}, produced_qty=${mo.produced_qty}, planned_qty=${mo.planned_qty}`)
+      })
       setManufacturingOrders(data)
       setFilteredMOs(data)
     } catch (err) {
@@ -116,7 +120,145 @@ export default function ManufacturingOrdersPage() {
   }
 
   const getProgressPercentage = (produced: number, planned: number) => {
-    return planned > 0 ? Math.round((produced / planned) * 100) : 0
+    console.log(`getProgressPercentage: produced=${produced}, planned=${planned}`)
+    const percentage = planned > 0 ? Math.round((produced / planned) * 100) : 0
+    console.log(`Calculated percentage: ${percentage}%`)
+    return percentage
+  }
+
+  const autoCompleteManufacturingOrder = async (moId: number, token: string | null) => {
+    try {
+      console.log(`Starting auto-completion for MO ${moId}`)
+      const response = await fetch("/api/manufacturing-orders", {
+        method: "PUT",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: moId,
+          status: 'completed'
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to auto-complete manufacturing order")
+      }
+
+      const updatedMO = await response.json()
+      console.log(`Successfully auto-completed manufacturing order ${moId}:`, {
+        status: updatedMO.status,
+        produced_qty: updatedMO.produced_qty,
+        planned_qty: updatedMO.planned_qty
+      })
+
+      // Small delay to ensure database is updated
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Refresh the manufacturing orders list
+      console.log(`Refreshing data after auto-completion of MO ${moId}`)
+      await fetchManufacturingOrders()
+    } catch (error) {
+      console.error(`Failed to auto-complete manufacturing order ${moId}:`, error)
+    }
+  }
+
+  // Component for displaying progress with work center completion
+  const ProgressCell = ({ mo }: { mo: ManufacturingOrder }) => {
+    const [workCenterProgress, setWorkCenterProgress] = useState({ completed: 0, total: 0, percentage: 0 })
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+      const fetchWorkCenterProgress = async () => {
+        setLoading(true)
+        try {
+          const token = localStorage.getItem("erp_token")
+          const response = await fetch(`/api/manufacturing-orders/${mo.id}/work-centers`, {
+            headers: {
+              "Authorization": token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          })
+
+          if (response.ok) {
+            const workCenters = await response.json()
+            const total = workCenters.length
+            const completed = workCenters.filter((wc: any) => wc.work_order_status === 'completed').length
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
+
+            setWorkCenterProgress({ completed, total, percentage })
+
+            // Auto-complete MO if all work centers are completed and status is in_progress
+            if (percentage === 100 && mo.status === 'in_progress' && total > 0) {
+              console.log(`Auto-completing MO ${mo.mo_number}: all work centers completed`)
+              await autoCompleteManufacturingOrder(mo.id, token)
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching work center progress:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      fetchWorkCenterProgress()
+    }, [mo.id, mo.status])
+
+    // Always show work center progress for all statuses
+    return (
+      <div>
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+          <div
+            className={`h-2 rounded-full transition-all duration-300 ${
+              workCenterProgress.percentage >= 100 ? 'bg-green-500' :
+              workCenterProgress.percentage >= 70 ? 'bg-blue-500' :
+              workCenterProgress.percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}
+            style={{ width: `${workCenterProgress.percentage}%` }}
+          ></div>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {loading ? (
+            <span>Loading...</span>
+          ) : (
+            <span>Work centers: {workCenterProgress.completed}/{workCenterProgress.total} ({workCenterProgress.percentage}%)</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const handleDeleteMO = async (moId: number, moNumber: string) => {
+    if (!confirm(`Are you sure you want to cancel Manufacturing Order ${moNumber}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("erp_token")
+
+      const response = await fetch("/api/manufacturing-orders", {
+        method: "DELETE",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: moId }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to cancel manufacturing order")
+      }
+
+      // Refresh the list
+      fetchManufacturingOrders()
+
+      // Show success message
+      alert(`Manufacturing Order ${moNumber} has been cancelled successfully.`)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to cancel manufacturing order")
+    }
   }
 
   return (
@@ -201,24 +343,12 @@ export default function ManufacturingOrdersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div>
-                          {mo.produced_qty} / {mo.planned_qty}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {getProgressPercentage(mo.produced_qty, mo.planned_qty)}% complete
-                        </div>
+                      <div className="font-medium">
+                        {mo.planned_qty}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{
-                            width: `${getProgressPercentage(mo.produced_qty, mo.planned_qty)}%`,
-                          }}
-                        ></div>
-                      </div>
+                      <ProgressCell mo={mo} />
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(mo.status)}>{mo.status.replace("_", " ")}</Badge>
@@ -240,7 +370,14 @@ export default function ManufacturingOrdersPage() {
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600"
+                          onClick={() => handleDeleteMO(mo.id, mo.mo_number)}
+                          disabled={mo.status !== 'draft'}
+                          title={mo.status !== 'draft' ? 'Cannot cancel MO that is in progress or completed' : 'Cancel Manufacturing Order'}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

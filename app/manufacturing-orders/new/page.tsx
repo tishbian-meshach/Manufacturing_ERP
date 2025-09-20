@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ArrowLeft, Save, Loader2, GripVertical, X, Settings } from "lucide-react"
 import Link from "next/link"
 
 interface Item {
@@ -27,6 +29,21 @@ interface BOM {
   item_id: number
 }
 
+interface WorkCenter {
+  id: number
+  name: string
+  description: string
+  capacity_per_hour: number
+}
+
+interface SelectedWorkCenter {
+  id: number
+  name: string
+  description: string
+  execution_order: number
+  is_parallel: boolean
+}
+
 export default function NewManufacturingOrderPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
@@ -40,6 +57,11 @@ export default function NewManufacturingOrderPage() {
   })
   const [items, setItems] = useState<Item[]>([])
   const [boms, setBoms] = useState<BOM[]>([])
+  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([])
+  const [selectedWorkCenters, setSelectedWorkCenters] = useState<SelectedWorkCenter[]>([])
+  const [availableWorkCenters, setAvailableWorkCenters] = useState<WorkCenter[]>([])
+  const [draggedItem, setDraggedItem] = useState<SelectedWorkCenter | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -47,6 +69,7 @@ export default function NewManufacturingOrderPage() {
   useEffect(() => {
     fetchItems()
     fetchBOMs()
+    fetchWorkCenters()
   }, [])
 
   const fetchItems = async () => {
@@ -90,6 +113,26 @@ export default function NewManufacturingOrderPage() {
     }
   }
 
+  const fetchWorkCenters = async () => {
+    try {
+      const token = localStorage.getItem("erp_token")
+      const response = await fetch("/api/workcenters", {
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch work centers")
+      }
+      const data = await response.json()
+      setWorkCenters(data)
+      setAvailableWorkCenters(data)
+    } catch (err) {
+      console.error("Error fetching work centers:", err)
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -118,6 +161,11 @@ export default function NewManufacturingOrderPage() {
         planned_start_date: formData.planned_start_date || undefined,
         planned_end_date: formData.planned_end_date || undefined,
         priority: formData.priority,
+        work_centers: selectedWorkCenters.map(wc => ({
+          work_center_id: wc.id,
+          execution_order: wc.execution_order,
+          is_parallel: wc.is_parallel,
+        })),
       }
 
       const token = localStorage.getItem("erp_token")
@@ -145,6 +193,131 @@ export default function NewManufacturingOrderPage() {
   }
 
   const availableBOMs = boms.filter((bom) => !formData.item_id || bom.item_id === parseInt(formData.item_id))
+
+  // Work center management functions
+  const handleWorkCenterSelect = (workCenter: WorkCenter, checked: boolean) => {
+    if (checked) {
+      const newSelected: SelectedWorkCenter = {
+        id: workCenter.id,
+        name: workCenter.name,
+        description: workCenter.description,
+        execution_order: selectedWorkCenters.length + 1,
+        is_parallel: false,
+      }
+      setSelectedWorkCenters([...selectedWorkCenters, newSelected])
+      setAvailableWorkCenters(availableWorkCenters.filter(wc => wc.id !== workCenter.id))
+    } else {
+      const removed = selectedWorkCenters.find(wc => wc.id === workCenter.id)
+      if (removed) {
+        setSelectedWorkCenters(selectedWorkCenters.filter(wc => wc.id !== workCenter.id))
+        setAvailableWorkCenters([...availableWorkCenters, workCenter])
+      }
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, item: SelectedWorkCenter) => {
+    setDraggedItem(item)
+    e.dataTransfer.effectAllowed = 'move'
+    // Use browser's default drag image for smoother experience
+    e.dataTransfer.setData('text/plain', item.id.toString())
+  }
+
+  const createDragOverHandler = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+
+    // Use requestAnimationFrame for smoother updates
+    requestAnimationFrame(() => {
+      setDragOverIndex(index)
+    })
+  }
+
+  const createDropHandler = (dropIndex: number) => (e: React.DragEvent) => {
+    e.preventDefault()
+    if (!draggedItem) return
+
+    const draggedIndex = selectedWorkCenters.findIndex(wc => wc.id === draggedItem.id)
+    if (draggedIndex === -1) return
+
+    const newWorkCenters = [...selectedWorkCenters]
+    newWorkCenters.splice(draggedIndex, 1)
+
+    // Insert at the correct position
+    const insertIndex = dropIndex > draggedIndex ? dropIndex - 1 : dropIndex
+    newWorkCenters.splice(insertIndex, 0, draggedItem)
+
+    // Update execution order
+    const updatedWorkCenters = newWorkCenters.map((wc, index) => ({
+      ...wc,
+      execution_order: index + 1
+    }))
+
+    setSelectedWorkCenters(updatedWorkCenters)
+    setDraggedItem(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragLeave = () => {
+    // Use requestAnimationFrame for smoother clearing
+    requestAnimationFrame(() => {
+      setDragOverIndex(null)
+    })
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    if (!draggedItem) return
+
+    const draggedIndex = selectedWorkCenters.findIndex(wc => wc.id === draggedItem.id)
+    if (draggedIndex === -1) return
+
+    const newWorkCenters = [...selectedWorkCenters]
+    newWorkCenters.splice(draggedIndex, 1)
+
+    // Insert at the correct position
+    const insertIndex = dropIndex > draggedIndex ? dropIndex - 1 : dropIndex
+    newWorkCenters.splice(insertIndex, 0, draggedItem)
+
+    // Update execution order
+    const updatedWorkCenters = newWorkCenters.map((wc, index) => ({
+      ...wc,
+      execution_order: index + 1
+    }))
+
+    setSelectedWorkCenters(updatedWorkCenters)
+
+    // Small delay for smooth visual transition
+    setTimeout(() => {
+      setDraggedItem(null)
+      setDragOverIndex(null)
+    }, 50)
+  }
+
+  const handleDragEnd = () => {
+    // Use requestAnimationFrame for smoother cleanup
+    requestAnimationFrame(() => {
+      setDraggedItem(null)
+      setDragOverIndex(null)
+    })
+  }
+
+  const handleParallelToggle = (workCenterId: number, isParallel: boolean) => {
+    setSelectedWorkCenters(selectedWorkCenters.map(wc =>
+      wc.id === workCenterId ? { ...wc, is_parallel: isParallel } : wc
+    ))
+  }
+
+
+  const removeWorkCenter = (workCenterId: number) => {
+    const removed = selectedWorkCenters.find(wc => wc.id === workCenterId)
+    if (removed) {
+      setSelectedWorkCenters(selectedWorkCenters.filter(wc => wc.id !== workCenterId))
+      const originalWorkCenter = workCenters.find(wc => wc.id === workCenterId)
+      if (originalWorkCenter) {
+        setAvailableWorkCenters([...availableWorkCenters, originalWorkCenter])
+      }
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -264,6 +437,126 @@ export default function NewManufacturingOrderPage() {
                     onChange={handleInputChange}
                   />
                 </div>
+              </div>
+
+              {/* Work Centers Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  <Label className="text-lg font-semibold">Work Centers & Execution Plan</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Select work centers and define their execution order. Drag to reorder, toggle parallel execution.
+                </p>
+
+                {/* Available Work Centers */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Available Work Centers</Label>
+                  <div className="grid gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                    {availableWorkCenters.map((workCenter) => (
+                      <div key={workCenter.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`wc-${workCenter.id}`}
+                          checked={false}
+                          onCheckedChange={(checked) =>
+                            handleWorkCenterSelect(workCenter, checked as boolean)
+                          }
+                        />
+                        <Label
+                          htmlFor={`wc-${workCenter.id}`}
+                          className="flex-1 text-sm cursor-pointer"
+                        >
+                          <div className="font-medium">{workCenter.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {workCenter.description} • {workCenter.capacity_per_hour} units/hour
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
+                    {availableWorkCenters.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        All work centers have been selected
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Work Centers with Drag & Drop */}
+                {selectedWorkCenters.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Selected Work Centers (Drag to reorder)</Label>
+                    <div className="space-y-2">
+                      {selectedWorkCenters.map((workCenter, index) => (
+                        <div key={`workcenter-${workCenter.id}`}>
+                          {/* Drop zone indicator */}
+                          {dragOverIndex === index && draggedItem && (
+                            <div className="h-2 bg-blue-500 rounded-full animate-pulse mb-2" />
+                          )}
+
+                          <div
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, workCenter)}
+                            onDragOver={createDragOverHandler(index)}
+                            onDrop={createDropHandler(index)}
+                            onDragLeave={handleDragLeave}
+                            onDragEnd={handleDragEnd}
+                            className={`flex items-center gap-3 p-3 border rounded-md cursor-move transition-all duration-150 ease-out will-change-transform ${
+                              draggedItem?.id === workCenter.id
+                                ? 'opacity-60 shadow-lg scale-102 z-10'
+                                : dragOverIndex === index
+                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                : 'bg-muted/50 hover:bg-muted'
+                            }`}
+                          >
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{workCenter.execution_order}.</span>
+                                <span className="font-medium">{workCenter.name}</span>
+                                {workCenter.is_parallel && (
+                                  <Badge variant="secondary" className="text-xs text-blue-500">
+                                    Parallel
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {workCenter.description}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                <Checkbox
+                                  id={`parallel-${workCenter.id}`}
+                                  checked={workCenter.is_parallel}
+                                  onCheckedChange={(checked) =>
+                                    handleParallelToggle(workCenter.id, checked as boolean)
+                                  }
+                                />
+                                <Label htmlFor={`parallel-${workCenter.id}`} className="text-xs">
+                                  Parallel
+                                </Label>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeWorkCenter(workCenter.id)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Final drop zone */}
+                      {dragOverIndex === selectedWorkCenters.length && draggedItem && (
+                        <div className="h-2 bg-blue-500 rounded-full animate-pulse mt-2" />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Notes */}

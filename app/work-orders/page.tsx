@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Play, Pause, CheckCircle, Eye, Edit, Clock } from "lucide-react"
+import { Plus, Search, Play, Pause, CheckCircle, Eye, Edit, Clock, RefreshCw, Settings } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface WorkOrder {
   id: number
@@ -17,6 +18,7 @@ interface WorkOrder {
   mo_number: string | null
   operation_name: string
   work_center_name: string | null
+  capacity_per_hour: number | null
   item_name: string | null
   planned_qty: number
   completed_qty: number
@@ -67,6 +69,7 @@ export default function WorkOrdersPage() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filteredWOs, setFilteredWOs] = useState<WorkOrder[]>([])
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     fetchWorkOrders()
@@ -92,6 +95,180 @@ export default function WorkOrdersPage() {
     setFilteredWOs(filtered)
   }, [searchTerm, statusFilter, workOrders])
 
+  // Auto-refresh functionality (always on, every 5 seconds)
+  useEffect(() => {
+    console.log("Starting auto-refresh every 5 seconds")
+
+    const intervalId = setInterval(async () => {
+      try {
+        await fetchWorkOrders()
+      } catch (error) {
+        console.error("Auto-refresh failed:", error)
+      }
+    }, 5000) // 5 seconds
+
+    return () => {
+      console.log("Stopping auto-refresh")
+      clearInterval(intervalId)
+    }
+  }, [])
+
+  // Auto-complete work orders when progress reaches 100%
+  useEffect(() => {
+    const autoCompleteWorkOrders = async () => {
+      // Check if we have a valid token
+      const token = localStorage.getItem("erp_token")
+      if (!token) {
+        console.warn("No authentication token found, skipping auto-completion")
+        return
+      }
+
+      const workOrdersToComplete = workOrders.filter(wo => {
+        if (wo.status === 'completed') return false
+
+        const progress = calculateRealisticProgress(wo)
+        return progress.shouldAutoComplete
+      })
+
+      if (workOrdersToComplete.length > 0) {
+        console.log(`Auto-completing ${workOrdersToComplete.length} work orders`)
+
+        const completionPromises = workOrdersToComplete.map(async (wo) => {
+          try {
+            const response = await fetch("/api/work-orders", {
+              method: "PUT",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                id: wo.id,
+                status: 'completed',
+                completed_qty: wo.planned_qty
+              }),
+            })
+
+            if (!response.ok) {
+              if (response.status === 401) {
+                console.error(`Authentication failed for work order ${wo.id}. Token may be expired.`)
+                // Optionally redirect to login
+                // window.location.href = '/login'
+              }
+              const errorData = await response.json()
+              throw new Error(errorData.error || `HTTP ${response.status}: Failed to auto-complete work order`)
+            }
+
+            return { id: wo.id, success: true }
+          } catch (error) {
+            console.error(`Failed to auto-complete work order ${wo.id}:`, error)
+            return { id: wo.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+          }
+        })
+
+        const results = await Promise.all(completionPromises)
+        const successfulCompletions = results.filter(r => r.success).length
+        const failedCompletions = results.filter(r => !r.success).length
+
+        console.log(`Auto-completion results: ${successfulCompletions} successful, ${failedCompletions} failed`)
+
+        if (successfulCompletions > 0) {
+          console.log(`Successfully auto-completed ${successfulCompletions} work orders`)
+          // Refresh the work orders list
+          fetchWorkOrders()
+        }
+
+        if (failedCompletions > 0) {
+          console.warn(`${failedCompletions} work orders failed to auto-complete`)
+        }
+      }
+    }
+
+    // Only run auto-completion if we have work orders
+    if (workOrders.length > 0) {
+      autoCompleteWorkOrders()
+    }
+  }, [workOrders])
+
+  const autoUpdateWorkOrders = async (workOrders: WorkOrder[]) => {
+    const token = localStorage.getItem("erp_token")
+    if (!token) {
+      console.warn("No authentication token found, skipping auto-updates")
+      return
+    }
+
+    const updates: Promise<any>[] = []
+
+    for (const wo of workOrders) {
+      if (wo.status === 'in_progress' && wo.actual_start_time && wo.capacity_per_hour && wo.capacity_per_hour > 0) {
+        const startTime = new Date(wo.actual_start_time)
+        const now = new Date()
+
+        // Time elapsed in minutes
+        const timeElapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60)
+
+        // Time per unit in minutes
+        const timePerUnitMinutes = 60 / wo.capacity_per_hour
+
+        // Calculate expected completed items based on time elapsed
+        const expectedCompleted = Math.floor(timeElapsedMinutes / timePerUnitMinutes)
+
+        console.log(`Work Order ${wo.id}: elapsed=${timeElapsedMinutes.toFixed(1)}m, timePerUnit=${timePerUnitMinutes.toFixed(1)}m, expected=${expectedCompleted}, current=${wo.completed_qty}`)
+
+        // Only update if we have more completed items than currently recorded
+        // Don't auto-complete to 100% unless we've reached the total time
+        if (expectedCompleted > wo.completed_qty && expectedCompleted < wo.planned_qty) {
+          console.log(`Updating WO ${wo.id}: ${wo.completed_qty} → ${expectedCompleted}`)
+          updates.push(
+            fetch("/api/work-orders", {
+              method: "PUT",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                id: wo.id,
+                completed_qty: expectedCompleted,
+                status: wo.status // Keep as in_progress
+              }),
+            })
+          )
+        } else if (expectedCompleted >= wo.planned_qty && wo.completed_qty < wo.planned_qty) {
+          // Only auto-complete when we've reached or exceeded the total required time
+          const totalRequiredMinutes = wo.planned_qty * timePerUnitMinutes
+          if (timeElapsedMinutes >= totalRequiredMinutes) {
+            console.log(`Auto-completing WO ${wo.id}: reached total time`)
+            updates.push(
+              fetch("/api/work-orders", {
+                method: "PUT",
+                headers: {
+                  "Authorization": `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  id: wo.id,
+                  completed_qty: wo.planned_qty,
+                  status: 'completed'
+                }),
+              })
+            )
+          }
+        }
+      }
+    }
+
+    if (updates.length > 0) {
+      try {
+        const results = await Promise.all(updates)
+        console.log(`Auto-updated ${results.length} work orders`)
+      } catch (error) {
+        console.error("Error auto-updating work orders:", error)
+        if (error instanceof Error && error.message?.includes('401')) {
+          console.error("Authentication failed during auto-update. Token may be expired.")
+        }
+      }
+    }
+  }
+
   const fetchWorkOrders = async () => {
     try {
       const token = localStorage.getItem("erp_token")
@@ -105,7 +282,31 @@ export default function WorkOrdersPage() {
         throw new Error("Failed to fetch work orders")
       }
       const data = await response.json()
-      setWorkOrders(data)
+      console.log("Fetched work orders:", data.length)
+
+      // Auto-update work orders based on elapsed time
+      console.log("Running auto-update...")
+      await autoUpdateWorkOrders(data)
+
+      // Small delay to ensure updates are processed
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Fetch updated data
+      console.log("Fetching updated work orders...")
+      const updatedResponse = await fetch("/api/work-orders", {
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      })
+      if (updatedResponse.ok) {
+        const updatedData = await updatedResponse.json()
+        console.log("Updated work orders:", updatedData.length)
+        setWorkOrders(updatedData)
+      } else {
+        console.log("Failed to fetch updated data, using original")
+        setWorkOrders(data)
+      }
     } catch (err) {
       console.error("Error fetching work orders:", err)
     } finally {
@@ -115,6 +316,110 @@ export default function WorkOrdersPage() {
 
   const getProgressPercentage = (completed: number, planned: number) => {
     return planned > 0 ? Math.round((completed / planned) * 100) : 0
+  }
+
+  const calculateRealisticProgress = (wo: WorkOrder) => {
+    const { completed_qty, planned_qty, capacity_per_hour, actual_start_time, status } = wo
+
+    // If completed, return 100%
+    if (status === 'completed' || completed_qty >= planned_qty) {
+      return {
+        percentage: 100,
+        timeRemaining: 0,
+        timeElapsed: 0,
+        expectedCompletionTime: null,
+        autoCompleted: planned_qty
+      }
+    }
+
+    // If not started, return 0%
+    if (status === 'pending' || !actual_start_time) {
+      return {
+        percentage: 0,
+        timeRemaining: null,
+        timeElapsed: 0,
+        expectedCompletionTime: null,
+        autoCompleted: 0
+      }
+    }
+
+    // Simple mathematical calculation based on capacity
+    if (!capacity_per_hour || capacity_per_hour <= 0) {
+      // Fallback to quantity-based calculation
+      return {
+        percentage: getProgressPercentage(completed_qty, planned_qty),
+        timeRemaining: null,
+        timeElapsed: 0,
+        expectedCompletionTime: null,
+        autoCompleted: completed_qty
+      }
+    }
+
+    // Calculate using the simple formula
+    const startTime = new Date(actual_start_time)
+    const now = new Date()
+
+    // Time per unit = 60 minutes / capacity_per_hour
+    const timePerUnitMinutes = 60 / capacity_per_hour
+
+    // Total time required = planned_qty * timePerUnitMinutes
+    const totalTimeRequiredMinutes = planned_qty * timePerUnitMinutes
+
+    // Time elapsed in minutes
+    const timeElapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60)
+    const timeElapsedHours = timeElapsedMinutes / 60
+
+    // Expected completion time = start time + total time required
+    const expectedCompletionTime = new Date(startTime.getTime() + (totalTimeRequiredMinutes * 60 * 1000))
+
+    // Progress percentage = (time elapsed / total time required) * 100
+    const percentage = Math.min(100, Math.round((timeElapsedMinutes / totalTimeRequiredMinutes) * 100))
+
+    // Time remaining in hours
+    const timeRemainingMinutes = Math.max(0, totalTimeRequiredMinutes - timeElapsedMinutes)
+    const timeRemaining = timeRemainingMinutes / 60
+
+    // Auto-calculated completed items based on time elapsed
+    const autoCompletedItems = Math.min(
+      planned_qty,
+      Math.max(completed_qty, Math.floor(timeElapsedMinutes / timePerUnitMinutes))
+    )
+
+    return {
+      percentage,
+      timeRemaining,
+      timeElapsed: timeElapsedHours,
+      expectedCompletionTime,
+      autoCompleted: autoCompletedItems,
+      shouldAutoComplete: percentage >= 100 && status !== 'completed'
+    }
+  }
+
+  const formatTimeRemaining = (hours: number | null) => {
+    if (hours === null) return "Unknown"
+    if (hours === 0) return "Complete"
+
+    if (hours < 1) {
+      const minutes = Math.round(hours * 60)
+      return `${minutes}m remaining`
+    } else if (hours < 24) {
+      return `${Math.round(hours)}h remaining`
+    } else {
+      const days = Math.round(hours / 24)
+      return `${days}d remaining`
+    }
+  }
+
+  const formatTimeElapsed = (hours: number) => {
+    if (hours < 1) {
+      const minutes = Math.round(hours * 60)
+      return `${minutes}m elapsed`
+    } else if (hours < 24) {
+      return `${Math.round(hours)}h elapsed`
+    } else {
+      const days = Math.round(hours / 24)
+      return `${days}d elapsed`
+    }
   }
 
   const handleStatusChange = async (woId: number, newStatus: string) => {
@@ -245,11 +550,29 @@ export default function WorkOrdersPage() {
           </CardContent>
         </Card>
 
+        {/* Refresh Button */}
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            onClick={() => fetchWorkOrders()}
+            disabled={isRefreshing}
+            className={isRefreshing ? 'animate-pulse' : ''}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
+
         {/* Work Orders Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Work Orders ({filteredWOs.length})</CardTitle>
-            <CardDescription>List of all work orders with their current status and progress</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              Work Orders ({filteredWOs.length})
+              
+            </CardTitle>
+            <CardDescription>
+              List of all work orders with their current status and progress
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -258,9 +581,9 @@ export default function WorkOrdersPage() {
                   <TableHead>WO Number</TableHead>
                   <TableHead>MO Number</TableHead>
                   <TableHead>Operation</TableHead>
-                  <TableHead>Work Center</TableHead>
+                  <TableHead>Work Center & Capacity</TableHead>
                   <TableHead>Item</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead>Progress & Time</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Planned Time</TableHead>
@@ -277,21 +600,93 @@ export default function WorkOrdersPage() {
                       </Link>
                     </TableCell>
                     <TableCell>{wo.operation_name}</TableCell>
-                    <TableCell>{wo.work_center_name}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div>{wo.work_center_name}</div>
+                        {wo.capacity_per_hour && (
+                          <div className="text-xs text-muted-foreground">
+                            {wo.capacity_per_hour}/hr capacity
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{wo.item_name}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="text-sm">
+                        <div className="text-sm font-medium mb-1">
                           {wo.completed_qty} / {wo.planned_qty}
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                          <div
-                            className="bg-blue-600 h-1.5 rounded-full"
-                            style={{
-                              width: `${getProgressPercentage(wo.completed_qty, wo.planned_qty)}%`,
-                            }}
-                          ></div>
-                        </div>
+                        {(() => {
+                          const progress = calculateRealisticProgress(wo)
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="cursor-help">
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full transition-all duration-300 ${
+                                          progress.shouldAutoComplete ? 'bg-green-500 animate-pulse' :
+                                          progress.percentage >= 100 ? 'bg-green-500' :
+                                          progress.percentage >= 70 ? 'bg-blue-500' :
+                                          progress.percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                                        }`}
+                                        style={{ width: `${progress.percentage}%` }}
+                                      ></div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1 text-center">
+                                      {progress.percentage}% complete
+                                      {progress.shouldAutoComplete && (
+                                        <div className="text-green-600 font-medium text-xs">
+                                          Auto-completing...
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="space-y-2">
+                                    <div className="font-medium">Progress Calculation</div>
+                                    <div className="text-sm space-y-1">
+                                      <div><strong>Work Center Capacity:</strong> {wo.capacity_per_hour}/hr</div>
+                                      <div><strong>Required Quantity:</strong> {wo.planned_qty} units</div>
+
+                                      {wo.capacity_per_hour && (
+                                        <>
+                                          <div><strong>Time per Unit:</strong> {Math.round((60 / wo.capacity_per_hour) * 100) / 100} minutes</div>
+                                          <div><strong>Total Time Required:</strong> {Math.round((wo.planned_qty * (60 / wo.capacity_per_hour)) * 100) / 100} minutes</div>
+                                        </>
+                                      )}
+
+                                      <div className="border-t pt-1 mt-2">
+                                        <div><strong>Current Progress:</strong> {progress.percentage}%</div>
+                                        <div><strong>Completed:</strong> {wo.completed_qty} / {wo.planned_qty}</div>
+
+                                        {progress.shouldAutoComplete && (
+                                          <div className="text-green-600 font-medium">
+                                            ⚡ Auto-completion will be triggered
+                                          </div>
+                                        )}
+
+                                        {progress.expectedCompletionTime && (
+                                          <div><strong>Expected Completion:</strong> {progress.expectedCompletionTime.toLocaleString()}</div>
+                                        )}
+
+                                        {progress.timeRemaining !== null && (
+                                          <div><strong>Time Remaining:</strong> {formatTimeRemaining(progress.timeRemaining)}</div>
+                                        )}
+
+                                        {progress.timeElapsed > 0 && (
+                                          <div><strong>Time Elapsed:</strong> {formatTimeElapsed(progress.timeElapsed)}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>

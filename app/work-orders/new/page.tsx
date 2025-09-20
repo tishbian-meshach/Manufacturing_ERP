@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Loader2, CheckCircle, Clock, Lock, Zap, Play } from "lucide-react"
 import Link from "next/link"
 
 interface ManufacturingOrder {
@@ -34,6 +34,17 @@ interface User {
   role: string
 }
 
+interface WorkCenterAssignment {
+  id: number
+  work_center_id: number
+  execution_order: number
+  is_parallel: boolean
+  work_center_name: string
+  has_work_order: boolean
+  work_order_status?: string
+  work_order_id?: number
+}
+
 export default function NewWorkOrderPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
@@ -49,6 +60,8 @@ export default function NewWorkOrderPage() {
   const [manufacturingOrders, setManufacturingOrders] = useState<ManufacturingOrder[]>([])
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [workCenterAssignments, setWorkCenterAssignments] = useState<WorkCenterAssignment[]>([])
+  const [availableWorkCenters, setAvailableWorkCenters] = useState<WorkCenterAssignment[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -118,6 +131,105 @@ export default function NewWorkOrderPage() {
     }
   }
 
+  const fetchWorkCenterAssignments = async (moId: number) => {
+    try {
+      const token = localStorage.getItem("erp_token")
+      const response = await fetch(`/api/manufacturing-orders/${moId}/work-centers`, {
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch work center assignments")
+      }
+      const data = await response.json()
+      setWorkCenterAssignments(data)
+      updateAvailableWorkCenters(data)
+    } catch (err) {
+      console.error("Error fetching work center assignments:", err)
+      setWorkCenterAssignments([])
+      setAvailableWorkCenters([])
+    }
+  }
+
+  const updateAvailableWorkCenters = (assignments: WorkCenterAssignment[]) => {
+    if (assignments.length === 0) {
+      setAvailableWorkCenters([])
+      return
+    }
+
+    const available: WorkCenterAssignment[] = []
+
+    // First, add all parallel work centers (they are always available)
+    assignments.forEach(assignment => {
+      if (assignment.is_parallel && !assignment.has_work_order) {
+        available.push(assignment)
+      }
+    })
+
+    // Then, add sequential work centers based on execution order rules
+    // Group by execution order
+    const groupedByOrder = assignments.reduce((acc, assignment) => {
+      if (!acc[assignment.execution_order]) {
+        acc[assignment.execution_order] = []
+      }
+      acc[assignment.execution_order].push(assignment)
+      return acc
+    }, {} as Record<number, WorkCenterAssignment[]>)
+
+    // Sort execution orders
+    const executionOrders = Object.keys(groupedByOrder)
+      .map(Number)
+      .sort((a, b) => a - b)
+
+    // Iterate through execution orders and determine which sequential ones are available
+    for (let i = 0; i < executionOrders.length; i++) {
+      const currentOrder = executionOrders[i]
+      const currentOrderAssignments = groupedByOrder[currentOrder]
+
+      let canExecuteCurrentOrder = true
+
+      if (i > 0) {
+        // Check previous execution orders
+        for (let j = 0; j < i; j++) {
+          const prevOrder = executionOrders[j]
+          const prevOrderAssignments = groupedByOrder[prevOrder]
+
+          // Check if all work centers in previous order are completed
+          const allPrevCompleted = prevOrderAssignments.every(assignment => {
+            return assignment.has_work_order && assignment.work_order_status === 'completed'
+          })
+
+          if (!allPrevCompleted) {
+            // Special case: If previous order has parallel work centers,
+            // allow current order if at least one work center is completed
+            const atLeastOneCompleted = prevOrderAssignments.some(assignment => {
+              return assignment.has_work_order && assignment.work_order_status === 'completed'
+            })
+            canExecuteCurrentOrder = atLeastOneCompleted
+            break
+          }
+        }
+      }
+
+      if (canExecuteCurrentOrder) {
+        // Add sequential work centers from this execution order that don't have work orders yet
+        // (parallel ones were already added above)
+        currentOrderAssignments.forEach(assignment => {
+          if (!assignment.is_parallel && !assignment.has_work_order) {
+            available.push(assignment)
+          }
+        })
+      }
+    }
+
+    // Sort by execution order for better UX
+    available.sort((a, b) => a.execution_order - b.execution_order)
+
+    setAvailableWorkCenters(available)
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -131,6 +243,20 @@ export default function NewWorkOrderPage() {
       ...prev,
       [name]: value,
     }))
+
+    // If manufacturing order is selected, fetch its work center assignments
+    if (name === "manufacturing_order_id" && value) {
+      const moId = parseInt(value)
+      fetchWorkCenterAssignments(moId)
+    }
+
+    // Clear work center selection when MO changes
+    if (name === "manufacturing_order_id") {
+      setFormData((prev) => ({
+        ...prev,
+        work_center_id: "",
+      }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,21 +351,92 @@ export default function NewWorkOrderPage() {
                 {/* Work Center Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="work_center_id">Work Center *</Label>
-                  <Select
-                    value={formData.work_center_id}
-                    onValueChange={(value) => handleSelectChange("work_center_id", value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a Work Center" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {workCenters.map((wc) => (
-                        <SelectItem key={wc.id} value={wc.id.toString()}>
-                          {wc.name} (Capacity: {wc.capacity_per_hour}/hr)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {availableWorkCenters.length > 0 ? (
+                    <Select
+                      value={formData.work_center_id}
+                      onValueChange={(value) => handleSelectChange("work_center_id", value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a Work Center" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableWorkCenters.map((assignment) => {
+                          const workCenter = workCenters.find(wc => wc.id === assignment.work_center_id)
+                          return workCenter ? (
+                            <SelectItem key={assignment.id} value={assignment.work_center_id.toString()}>
+                              <div className="flex items-center gap-2">
+                                {workCenter.name}
+                                {assignment.is_parallel && <Zap className="h-3 w-3 text-blue-500" />}
+                                <span className="text-xs text-muted-foreground">
+                                  (Order: {assignment.execution_order})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ) : null
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="w-full p-3 border rounded-md bg-muted text-muted-foreground text-sm">
+                      {formData.manufacturing_order_id
+                        ? "No work centers available for this manufacturing order"
+                        : "Select a manufacturing order first"
+                      }
+                    </div>
+                  )}
+
+                  {/* Show execution order info */}
+                  {workCenterAssignments.length > 0 && (
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p><strong>Execution Status:</strong></p>
+                      {workCenterAssignments
+                        .sort((a, b) => a.execution_order - b.execution_order)
+                        .map((assignment) => {
+                          const workCenter = workCenters.find(wc => wc.id === assignment.work_center_id)
+                          const isAvailable = availableWorkCenters.some(available => available.work_center_id === assignment.work_center_id)
+                          const isUsed = assignment.has_work_order
+
+                          let statusIcon = null
+                          let statusText = ""
+                          let statusClass = ""
+
+                          if (isUsed) {
+                            if (assignment.work_order_status === 'completed') {
+                              statusIcon = <CheckCircle className="h-3 w-3" />
+                              statusText = "Completed"
+                              statusClass = "text-green-600"
+                            } else if (assignment.work_order_status === 'in_progress') {
+                              statusIcon = <Clock className="h-3 w-3" />
+                              statusText = "In Progress"
+                              statusClass = "text-blue-600"
+                            } else {
+                              statusIcon = <Play className="h-3 w-3" />
+                              statusText = assignment.work_order_status?.replace('_', ' ') || 'Pending'
+                              statusClass = "text-orange-600"
+                            }
+                          } else if (isAvailable) {
+                            statusIcon = <Play className="h-3 w-3" />
+                            statusText = "Available"
+                            statusClass = "text-foreground font-medium"
+                          } else {
+                            statusIcon = <Lock className="h-3 w-3" />
+                            statusText = "Locked"
+                            statusClass = "text-muted-foreground"
+                          }
+
+                          return workCenter ? (
+                            <div key={assignment.id} className={`pl-2 flex items-center gap-2 ${statusClass}`}>
+                              <span>{assignment.execution_order}. {workCenter.name}</span>
+                              {assignment.is_parallel && <Zap className="h-3 w-3 text-blue-500" />}
+                              <div className="flex items-center gap-1">
+                                {statusIcon}
+                                <span className="text-xs">{statusText}</span>
+                              </div>
+                            </div>
+                          ) : null
+                        })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Operation Name */}
