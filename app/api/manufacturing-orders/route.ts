@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     console.log(`User company ID: ${userCompanyId}`)
     console.log(`Auth user data:`, authResult.user)
 
-    const { item_id, bom_id, planned_qty, planned_start_date, planned_end_date, priority, work_centers } = await request.json()
-    console.log(`Creating MO with data:`, { item_id, bom_id, planned_qty, work_centers_count: work_centers?.length })
+    const { item_id, bom_id, planned_qty, planned_start_date, planned_end_date, priority } = await request.json()
+    console.log(`Creating MO with data:`, { item_id, bom_id, planned_qty })
 
     if (!item_id || !planned_qty) {
       return NextResponse.json({ error: "Item and planned quantity are required" }, { status: 400 })
@@ -81,21 +81,56 @@ export async function POST(request: NextRequest) {
     const moId = newMO[0].id
     console.log(`Created MO with ID: ${moId}, Number: ${newMO[0].mo_number}`)
 
-    // Save work centers if provided
-    if (work_centers && work_centers.length > 0) {
-      console.log(`Saving ${work_centers.length} work centers for MO ${moId}`)
-      const workCenterValues = work_centers.map((wc: any) =>
-        `(${moId}, ${wc.work_center_id}, ${wc.execution_order}, ${wc.is_parallel || false}, ${userCompanyId})`
-      ).join(', ')
+    // If BOM is provided, create work orders based on BOM operations
+    if (bom_id) {
+      console.log(`Creating work orders from BOM ${bom_id} for MO ${moId}`)
 
-      await sql`
-        INSERT INTO mo_work_centers (
-          manufacturing_order_id, work_center_id, execution_order, is_parallel,
-          company_id
-        )
-        VALUES ${sql.unsafe(workCenterValues)}
+      // Get BOM operations
+      const bomOperations = await sql`
+        SELECT
+          bo.id,
+          bo.bom_id,
+          bo.work_center_id,
+          bo.operation_name,
+          bo.operation_description,
+          bo.duration_minutes,
+          bo.company_id,
+          bo.created_at,
+          bo.updated_at,
+          wc.name as work_center_name,
+          wc.capacity_per_hour
+        FROM bom_operations bo
+        JOIN work_centers wc ON bo.work_center_id = wc.id
+        WHERE bo.bom_id = ${bom_id} AND bo.company_id = ${userCompanyId}
+        ORDER BY bo.id
       `
-      console.log(`Saved work centers for MO ${moId}`)
+
+      console.log(`Found ${bomOperations.length} BOM operations`)
+
+      // Create work orders for each BOM operation
+      for (const operation of bomOperations) {
+        const woNumber = `WO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
+
+        // For BOM-level operations, the quantity is the full MO quantity
+        const plannedQty = planned_qty
+
+        await sql`
+          INSERT INTO work_orders (
+            wo_number, manufacturing_order_id, work_center_id, operation_name,
+            planned_qty, status, assigned_to, planned_start_time, planned_end_time,
+            company_id, created_at, updated_at
+          )
+          VALUES (
+            ${woNumber}, ${moId}, ${operation.work_center_id}, ${operation.operation_name},
+            ${plannedQty}, 'pending', ${null}, ${planned_start_date || null}, ${planned_end_date || null},
+            ${userCompanyId}, NOW(), NOW()
+          )
+        `
+
+        console.log(`Created work order ${woNumber} for operation: ${operation.operation_name}`)
+      }
+
+      console.log(`Created ${bomOperations.length} work orders for MO ${moId}`)
     }
 
     return NextResponse.json(newMO[0])

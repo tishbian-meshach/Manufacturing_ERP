@@ -15,14 +15,23 @@ export async function GET(request: NextRequest) {
 
     const userCompanyId = authResult.user.companyId
 
+    // Get work centers with utilization based on active work orders
     const result = await sql`
-      SELECT wc.*,
-             COUNT(wo.id) as active_work_orders,
-             COUNT(CASE WHEN wo.status = 'in_progress' THEN 1 END) as running_work_orders
+      SELECT
+        wc.*,
+        COUNT(DISTINCT CASE WHEN wo.status = 'in_progress' THEN wo.id END) as active_work_orders,
+        COUNT(DISTINCT CASE WHEN wo.status = 'in_progress' THEN wo.id END) as running_work_orders,
+        ROUND(
+          CASE
+            WHEN wc.capacity_per_hour > 0 THEN
+              LEAST(100, (COUNT(DISTINCT CASE WHEN wo.status = 'in_progress' THEN wo.id END) * 100.0) / wc.capacity_per_hour)
+            ELSE 0
+          END
+        ) as utilization_percentage
       FROM work_centers wc
-      LEFT JOIN work_orders wo ON wc.id = wo.work_center_id AND wo.status IN ('pending', 'in_progress') AND wo.company_id = ${userCompanyId}
+      LEFT JOIN work_orders wo ON wc.id = wo.work_center_id AND wo.company_id = ${userCompanyId} AND wo.status = 'in_progress'
       WHERE wc.company_id = ${userCompanyId}
-      GROUP BY wc.id
+      GROUP BY wc.id, wc.capacity_per_hour
       ORDER BY wc.name
     `
 

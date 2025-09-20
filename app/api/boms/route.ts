@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userCompanyId = authResult.user.companyId
-    const { bom_name, item_id, quantity, components } = await request.json()
+    const { bom_name, item_id, quantity, components, operations } = await request.json()
 
     if (!bom_name || !item_id || !quantity || !components || components.length === 0) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
@@ -69,9 +69,26 @@ export async function POST(request: NextRequest) {
       `
     }
 
+    // Add BOM operations at the BOM level
+    if (operations && operations.length > 0) {
+      for (const operation of operations) {
+        await sql`
+          INSERT INTO bom_operations (
+            bom_id, work_center_id, operation_name, operation_description,
+            duration_minutes, company_id, created_at, updated_at
+          )
+          VALUES (
+            ${bomId}, ${operation.work_center_id}, ${operation.operation_name},
+            ${operation.operation_description || null}, ${operation.duration_minutes},
+            ${userCompanyId}, NOW(), NOW()
+          )
+        `
+      }
+    }
+
     return NextResponse.json({
       id: bomId,
-      message: "BOM created successfully"
+      message: "BOM created successfully with operations"
     })
   } catch (error) {
     console.error("Create BOM error:", error)

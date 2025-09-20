@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Play, Pause, CheckCircle, Eye, Edit, Clock, RefreshCw, Settings } from "lucide-react"
+import { Plus, Search, Play, Pause, CheckCircle, Eye, Edit, Clock, RefreshCw, Settings, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -454,17 +454,11 @@ export default function WorkOrdersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Work Orders</h1>
-            <p className="text-muted-foreground">Manage and track individual work operations</p>
+            <p className="text-muted-foreground">Work orders are automatically created when manufacturing orders are generated from BOMs</p>
           </div>
           <div className="flex gap-2">
             <Link href="/work-centers">
               <Button variant="outline">Manage Work Centers</Button>
-            </Link>
-            <Link href="/work-orders/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Work Order
-              </Button>
             </Link>
           </div>
         </div>
@@ -542,8 +536,8 @@ export default function WorkOrdersPage() {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -571,7 +565,7 @@ export default function WorkOrdersPage() {
               
             </CardTitle>
             <CardDescription>
-              List of all work orders with their current status and progress
+              Work orders are automatically generated from BOM operations when manufacturing orders are created
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -738,6 +732,17 @@ export default function WorkOrdersPage() {
                               <Pause className="h-4 w-4" />
                             </Button>
                           </>
+                        )}
+                        {wo.status === "on_hold" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleStatusChange(wo.id, "in_progress")}
+                            className="text-blue-600"
+                            title="Resume work order"
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
                         )}
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />

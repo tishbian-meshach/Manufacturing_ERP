@@ -28,8 +28,9 @@ interface WorkCenter {
   is_active: boolean
   created_at: string
   updated_at: string
-  current_utilization?: number // Optional for API compatibility
-  active_work_orders?: number // Optional for API compatibility
+  active_work_orders?: number
+  running_work_orders?: number
+  utilization_percentage?: number
 }
 
 export default function WorkCentersPage() {
@@ -133,7 +134,7 @@ export default function WorkCentersPage() {
   const totalCapacity = activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + wc.capacity_per_hour, 0)
   const averageUtilization =
     activeWorkCenters.length > 0
-      ? Math.round(activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.current_utilization || 0), 0) / activeWorkCenters.length)
+      ? Math.round(activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.utilization_percentage || 0), 0) / activeWorkCenters.length)
       : 0
 
   return (
@@ -143,7 +144,7 @@ export default function WorkCentersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Work Centers</h1>
-            <p className="text-muted-foreground">Manage production work centers and their capacity</p>
+            <p className="text-muted-foreground">Monitor work center utilization based on active work orders</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -245,9 +246,9 @@ export default function WorkCentersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.active_work_orders || 0), 0)}
+                {activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.running_work_orders || 0), 0)}
               </div>
-              <p className="text-xs text-muted-foreground">currently running</p>
+              <p className="text-xs text-muted-foreground">active work orders</p>
             </CardContent>
           </Card>
         </div>
@@ -274,7 +275,7 @@ export default function WorkCentersPage() {
         <Card>
           <CardHeader>
             <CardTitle>Work Centers ({filteredWorkCenters.length})</CardTitle>
-            <CardDescription>List of all work centers with their capacity and utilization</CardDescription>
+            <CardDescription>List of all work centers with their capacity and utilization based on active work orders</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -284,7 +285,7 @@ export default function WorkCentersPage() {
                   <TableHead>Description</TableHead>
                   <TableHead>Capacity/Hour</TableHead>
                   <TableHead>Utilization</TableHead>
-                  <TableHead>Active WOs</TableHead>
+                  <TableHead>Active MOs</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -297,16 +298,16 @@ export default function WorkCentersPage() {
                     <TableCell>{wc.capacity_per_hour} units</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={getUtilizationColor(wc.current_utilization || 0)}>{wc.current_utilization || 0}%</span>
+                        <span className={getUtilizationColor(wc.utilization_percentage || 0)}>{wc.utilization_percentage || 0}%</span>
                         <div className="w-16 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${wc.current_utilization || 0}%` }}
+                            style={{ width: `${wc.utilization_percentage || 0}%` }}
                           ></div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{wc.active_work_orders}</TableCell>
+                    <TableCell>{wc.running_work_orders || 0}</TableCell>
                     <TableCell>
                       <Badge variant={wc.is_active ? "default" : "secondary"}>
                         {wc.is_active ? "Active" : "Inactive"}

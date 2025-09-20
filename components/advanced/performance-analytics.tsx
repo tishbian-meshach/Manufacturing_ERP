@@ -29,44 +29,64 @@ export function PerformanceAnalytics() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate advanced analytics data
-    const mockData = {
-      efficiency: [
-        { month: "Jan", efficiency: 85, target: 90 },
-        { month: "Feb", efficiency: 88, target: 90 },
-        { month: "Mar", efficiency: 92, target: 90 },
-        { month: "Apr", efficiency: 87, target: 90 },
-        { month: "May", efficiency: 94, target: 90 },
-        { month: "Jun", efficiency: 91, target: 90 },
-      ],
-      throughput: [
-        { day: "Mon", units: 120, capacity: 150 },
-        { day: "Tue", units: 135, capacity: 150 },
-        { day: "Wed", units: 142, capacity: 150 },
-        { day: "Thu", units: 128, capacity: 150 },
-        { day: "Fri", units: 145, capacity: 150 },
-        { day: "Sat", units: 98, capacity: 150 },
-        { day: "Sun", units: 75, capacity: 150 },
-      ],
-      workCenterUtilization: [
-        { name: "Assembly Line A", value: 85, color: "#0088FE" },
-        { name: "Assembly Line B", value: 92, color: "#00C49F" },
-        { name: "Quality Control", value: 78, color: "#FFBB28" },
-        { name: "Packaging", value: 88, color: "#FF8042" },
-        { name: "Maintenance", value: 65, color: "#8884D8" },
-      ],
-      qualityMetrics: [
-        { week: "W1", defectRate: 2.1, reworkRate: 1.5 },
-        { week: "W2", defectRate: 1.8, reworkRate: 1.2 },
-        { week: "W3", defectRate: 1.5, reworkRate: 0.9 },
-        { week: "W4", defectRate: 1.9, reworkRate: 1.1 },
-      ],
+    const fetchAnalyticsData = async () => {
+      try {
+        const token = localStorage.getItem("erp_token")
+        const response = await fetch("/api/analytics", {
+          headers: {
+            "Authorization": token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch analytics data")
+        }
+
+        const analyticsData = await response.json()
+        setData(analyticsData)
+      } catch (error) {
+        console.error("Error fetching analytics data:", error)
+        // Fallback to mock data if API fails
+        const mockData = {
+          efficiency: [
+            { month: "Jan", efficiency: 85, target: 90 },
+            { month: "Feb", efficiency: 88, target: 90 },
+            { month: "Mar", efficiency: 92, target: 90 },
+            { month: "Apr", efficiency: 87, target: 90 },
+            { month: "May", efficiency: 94, target: 90 },
+            { month: "Jun", efficiency: 91, target: 90 },
+          ],
+          throughput: [
+            { day: "Mon", units: 120, capacity: 150 },
+            { day: "Tue", units: 135, capacity: 150 },
+            { day: "Wed", units: 142, capacity: 150 },
+            { day: "Thu", units: 128, capacity: 150 },
+            { day: "Fri", units: 145, capacity: 150 },
+            { day: "Sat", units: 98, capacity: 150 },
+            { day: "Sun", units: 75, capacity: 150 },
+          ],
+          workCenterUtilization: [
+            { name: "Assembly Line A", value: 85, color: "#0088FE" },
+            { name: "Assembly Line B", value: 92, color: "#00C49F" },
+            { name: "Quality Control", value: 78, color: "#FFBB28" },
+            { name: "Packaging", value: 88, color: "#FF8042" },
+            { name: "Maintenance", value: 65, color: "#8884D8" },
+          ],
+          qualityMetrics: [
+            { week: "W1", defectRate: 2.1, reworkRate: 1.5 },
+            { week: "W2", defectRate: 1.8, reworkRate: 1.2 },
+            { week: "W3", defectRate: 1.5, reworkRate: 0.9 },
+            { week: "W4", defectRate: 1.9, reworkRate: 1.1 },
+          ],
+        }
+        setData(mockData)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setTimeout(() => {
-      setData(mockData)
-      setLoading(false)
-    }, 1000)
+    fetchAnalyticsData()
   }, [])
 
   if (loading) {
@@ -116,8 +136,8 @@ export function PerformanceAnalytics() {
                     <TrendingUp className="h-4 w-4 text-green-500" />
                     <span className="text-sm font-medium">Current Efficiency</span>
                   </div>
-                  <div className="text-2xl font-bold">91%</div>
-                  <div className="text-xs text-muted-foreground">+3% from last month</div>
+                  <div className="text-2xl font-bold">{data?.metrics?.currentEfficiency || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Current efficiency</div>
                 </CardContent>
               </Card>
               <Card>
@@ -126,7 +146,7 @@ export function PerformanceAnalytics() {
                     <Zap className="h-4 w-4 text-blue-500" />
                     <span className="text-sm font-medium">Target Achievement</span>
                   </div>
-                  <div className="text-2xl font-bold">101%</div>
+                  <div className="text-2xl font-bold">{data?.metrics?.targetAchievement || 0}%</div>
                   <div className="text-xs text-muted-foreground">Above target</div>
                 </CardContent>
               </Card>
@@ -136,8 +156,8 @@ export function PerformanceAnalytics() {
                     <Clock className="h-4 w-4 text-orange-500" />
                     <span className="text-sm font-medium">Avg Cycle Time</span>
                   </div>
-                  <div className="text-2xl font-bold">4.2h</div>
-                  <div className="text-xs text-muted-foreground">-0.3h improvement</div>
+                  <div className="text-2xl font-bold">{data?.metrics?.avgCycleTime || 0}h</div>
+                  <div className="text-xs text-muted-foreground">Average cycle time</div>
                 </CardContent>
               </Card>
               <Card>
@@ -146,8 +166,8 @@ export function PerformanceAnalytics() {
                     <Users className="h-4 w-4 text-purple-500" />
                     <span className="text-sm font-medium">Productivity</span>
                   </div>
-                  <div className="text-2xl font-bold">125%</div>
-                  <div className="text-xs text-muted-foreground">Units per hour</div>
+                  <div className="text-2xl font-bold">{data?.metrics?.productivity || 0}</div>
+                  <div className="text-xs text-muted-foreground">Units per work order</div>
                 </CardContent>
               </Card>
             </div>

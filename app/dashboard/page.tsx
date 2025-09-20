@@ -57,6 +57,31 @@ interface DashboardStats {
   qualityScore: number
 }
 
+interface ChartData {
+  productionData: Array<{
+    month: string
+    planned: number
+    actual: number
+    efficiency: number
+  }>
+  workCenterUtilization: Array<{
+    name: string
+    utilization: number
+    capacity: number
+  }>
+  orderStatusData: Array<{
+    name: string
+    value: number
+    color: string
+  }>
+  inventoryTrend: Array<{
+    date: string
+    rawMaterials: number
+    semiFinished: number
+    finished: number
+  }>
+}
+
 interface RecentMO {
   id: number
   mo_number: string
@@ -70,7 +95,8 @@ interface RecentMO {
   created_at: string
 }
 
-const productionData = [
+// Mock data as fallback
+const mockProductionData = [
   { month: "Jan", planned: 120, actual: 115, efficiency: 96 },
   { month: "Feb", planned: 135, actual: 142, efficiency: 105 },
   { month: "Mar", planned: 150, actual: 138, efficiency: 92 },
@@ -79,7 +105,7 @@ const productionData = [
   { month: "Jun", planned: 155, actual: 148, efficiency: 95 },
 ]
 
-const workCenterUtilization = [
+const mockWorkCenterUtilization = [
   { name: "Assembly Line 1", utilization: 85, capacity: 100 },
   { name: "CNC Machine 1", utilization: 72, capacity: 100 },
   { name: "Quality Control", utilization: 45, capacity: 100 },
@@ -87,14 +113,14 @@ const workCenterUtilization = [
   { name: "Raw Material Prep", utilization: 35, capacity: 100 },
 ]
 
-const orderStatusData = [
+const mockOrderStatusData = [
   { name: "Completed", value: 16, color: "#22c55e" },
   { name: "In Progress", value: 8, color: "#3b82f6" },
   { name: "Draft", value: 3, color: "#6b7280" },
   { name: "On Hold", value: 2, color: "#ef4444" },
 ]
 
-const inventoryTrend = [
+const mockInventoryTrend = [
   { date: "2024-01-01", rawMaterials: 85000, semiFinished: 25000, finished: 45000 },
   { date: "2024-01-08", rawMaterials: 82000, semiFinished: 28000, finished: 42000 },
   { date: "2024-01-15", rawMaterials: 78000, semiFinished: 32000, finished: 48000 },
@@ -137,6 +163,7 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<{
     stats: DashboardStats
     recentMOs: RecentMO[]
+    charts: ChartData
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -198,7 +225,7 @@ export default function DashboardPage() {
     )
   }
 
-  const { stats, recentMOs } = dashboardData
+  const { stats, recentMOs, charts } = dashboardData
 
   return (
     <DashboardLayout>
@@ -325,7 +352,7 @@ export default function DashboardPage() {
                     className="h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={productionData}>
+                      <BarChart data={charts?.productionData || mockProductionData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -357,14 +384,14 @@ export default function DashboardPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={orderStatusData}
+                          data={charts?.orderStatusData || mockOrderStatusData}
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
                           dataKey="value"
                           label={({ name, value }) => `${name}: ${value}`}
                         >
-                          {orderStatusData.map((entry, index) => (
+                          {(charts?.orderStatusData || mockOrderStatusData).map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -463,7 +490,7 @@ export default function DashboardPage() {
                     className="h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={productionData}>
+                      <LineChart data={charts?.productionData || mockProductionData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis domain={[80, 110]} />
@@ -496,7 +523,7 @@ export default function DashboardPage() {
                     className="h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={productionData}>
+                      <AreaChart data={charts?.productionData || mockProductionData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -541,7 +568,7 @@ export default function DashboardPage() {
                   className="h-[400px]"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={inventoryTrend}>
+                    <AreaChart data={charts?.inventoryTrend || mockInventoryTrend}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
@@ -591,7 +618,7 @@ export default function DashboardPage() {
                   className="h-[400px]"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={workCenterUtilization} layout="horizontal">
+                    <BarChart data={charts?.workCenterUtilization || mockWorkCenterUtilization} layout="horizontal">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" domain={[0, 100]} />
                       <YAxis dataKey="name" type="category" width={120} />

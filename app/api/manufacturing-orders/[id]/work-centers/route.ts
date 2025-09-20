@@ -33,25 +33,34 @@ export async function GET(
       return NextResponse.json({ error: "Manufacturing order not found" }, { status: 404 })
     }
 
-    // Get work center assignments for this MO with work order status
+    // Get the BOM associated with this manufacturing order
+    const moData = await sql`
+      SELECT bom_id FROM manufacturing_orders
+      WHERE id = ${moId} AND company_id = ${userCompanyId}
+    `
+
+    if (moData.length === 0 || !moData[0].bom_id) {
+      return NextResponse.json([])
+    }
+
+    // Get BOM operations with work order status
     const workCenterAssignments = await sql`
       SELECT
-        mwc.id,
-        mwc.work_center_id,
-        mwc.execution_order,
-        mwc.is_parallel,
+        bo.id,
+        bo.work_center_id,
+        bo.operation_name,
         wc.name as work_center_name,
         wc.capacity_per_hour,
         CASE WHEN wo.id IS NOT NULL THEN true ELSE false END as has_work_order,
         wo.status as work_order_status,
         wo.id as work_order_id
-      FROM mo_work_centers mwc
-      JOIN work_centers wc ON mwc.work_center_id = wc.id
-      LEFT JOIN work_orders wo ON wo.manufacturing_order_id = mwc.manufacturing_order_id
-        AND wo.work_center_id = mwc.work_center_id
-        AND wo.company_id = mwc.company_id
-      WHERE mwc.manufacturing_order_id = ${moId} AND mwc.company_id = ${userCompanyId}
-      ORDER BY mwc.execution_order, mwc.id
+      FROM bom_operations bo
+      JOIN work_centers wc ON bo.work_center_id = wc.id
+      LEFT JOIN work_orders wo ON wo.manufacturing_order_id = ${moId}
+        AND wo.work_center_id = bo.work_center_id
+        AND wo.company_id = bo.company_id
+      WHERE bo.bom_id = ${moData[0].bom_id} AND bo.company_id = ${userCompanyId}
+      ORDER BY bo.id
     `
 
     return NextResponse.json(workCenterAssignments)

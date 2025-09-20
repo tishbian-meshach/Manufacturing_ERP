@@ -21,41 +21,61 @@ export function DelayPrediction() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate ML-based delay prediction
-    const mockPredictions: DelayPrediction[] = [
-      {
-        workOrderId: "WO-001",
-        workOrderName: "Assembly Line A - Product X",
-        currentProgress: 65,
-        predictedDelay: 2.5,
-        riskLevel: "high",
-        factors: ["Resource shortage", "Equipment maintenance due"],
-        recommendation: "Allocate additional resources or reschedule maintenance",
-      },
-      {
-        workOrderId: "WO-003",
-        workOrderName: "Quality Control - Product Y",
-        currentProgress: 80,
-        predictedDelay: 0.5,
-        riskLevel: "low",
-        factors: ["Minor bottleneck in testing"],
-        recommendation: "Monitor closely, no immediate action needed",
-      },
-      {
-        workOrderId: "WO-005",
-        workOrderName: "Packaging - Product Z",
-        currentProgress: 45,
-        predictedDelay: 1.2,
-        riskLevel: "medium",
-        factors: ["Supplier delay", "Increased demand"],
-        recommendation: "Contact backup suppliers, consider overtime",
-      },
-    ]
+    const fetchDelayPredictions = async () => {
+      try {
+        const token = localStorage.getItem("erp_token")
+        const response = await fetch("/api/analytics", {
+          headers: {
+            "Authorization": token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json",
+          },
+        })
 
-    setTimeout(() => {
-      setPredictions(mockPredictions)
-      setLoading(false)
-    }, 1000)
+        if (!response.ok) {
+          throw new Error("Failed to fetch analytics data")
+        }
+
+        const analyticsData = await response.json()
+        setPredictions(analyticsData.delayPredictions || [])
+      } catch (error) {
+        console.error("Error fetching delay predictions:", error)
+        // Fallback to mock data if API fails
+        const mockPredictions: DelayPrediction[] = [
+          {
+            workOrderId: "WO-001",
+            workOrderName: "Assembly Line A - Product X",
+            currentProgress: 65,
+            predictedDelay: 2.5,
+            riskLevel: "high",
+            factors: ["Resource shortage", "Equipment maintenance due"],
+            recommendation: "Allocate additional resources or reschedule maintenance",
+          },
+          {
+            workOrderId: "WO-003",
+            workOrderName: "Quality Control - Product Y",
+            currentProgress: 80,
+            predictedDelay: 0.5,
+            riskLevel: "low",
+            factors: ["Minor bottleneck in testing"],
+            recommendation: "Monitor closely, no immediate action needed",
+          },
+          {
+            workOrderId: "WO-005",
+            workOrderName: "Packaging - Product Z",
+            currentProgress: 45,
+            predictedDelay: 1.2,
+            riskLevel: "medium",
+            factors: ["Supplier delay", "Increased demand"],
+            recommendation: "Contact backup suppliers, consider overtime",
+          },
+        ]
+        setPredictions(mockPredictions)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDelayPredictions()
   }, [])
 
   const getRiskColor = (risk: string) => {

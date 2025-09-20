@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Save, ArrowLeft, Package, Minus, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, Package, Minus, Loader2, Settings } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +34,14 @@ interface Item {
   unit_of_measure: string;
   standard_rate: number;
   item_type: string;
+}
+
+interface BOMOperation {
+  work_center_id: number;
+  work_center_name: string;
+  operation_name: string;
+  operation_description: string;
+  duration_minutes: number;
 }
 
 interface BOMComponent {
@@ -58,8 +66,15 @@ const getItemTypeColor = (type: string) => {
   }
 };
 
+interface WorkCenter {
+  id: number;
+  name: string;
+  capacity_per_hour: number;
+}
+
 export default function NewBOMPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [bomName, setBomName] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -71,12 +86,21 @@ export default function NewBOMPage() {
   });
   const [selectedItemForComponent, setSelectedItemForComponent] =
     useState<Item | null>(null);
+  const [bomOperations, setBomOperations] = useState<BOMOperation[]>([]);
+  const [currentOperation, setCurrentOperation] = useState({
+    work_center_id: 0,
+    operation_name: "",
+    operation_description: "",
+    duration_minutes: 60,
+  });
+  const [selectedWorkCenter, setSelectedWorkCenter] = useState<WorkCenter | null>(null);
 
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchItems();
+    fetchWorkCenters();
   }, []);
 
   const fetchItems = async () => {
@@ -100,6 +124,32 @@ export default function NewBOMPage() {
       toast({
         title: "Error",
         description: "Failed to load items",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchWorkCenters = async () => {
+    try {
+      const token = localStorage.getItem("erp_token");
+      const response = await fetch("/api/workcenters", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch work centers");
+      }
+
+      const data = await response.json();
+      setWorkCenters(data);
+    } catch (err) {
+      console.error("Error fetching work centers:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load work centers",
         variant: "destructive",
       });
     }
@@ -147,6 +197,40 @@ export default function NewBOMPage() {
     setComponents(components.filter((_, i) => i !== index));
   };
 
+  const handleAddBomOperation = () => {
+    if (!selectedWorkCenter || !currentOperation.operation_name) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a work center and enter operation name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newOperation: BOMOperation = {
+      work_center_id: selectedWorkCenter.id,
+      work_center_name: selectedWorkCenter.name,
+      operation_name: currentOperation.operation_name,
+      operation_description: currentOperation.operation_description,
+      duration_minutes: currentOperation.duration_minutes,
+    };
+
+    setBomOperations([...bomOperations, newOperation]);
+
+    // Reset operation form
+    setSelectedWorkCenter(null);
+    setCurrentOperation({
+      work_center_id: 0,
+      operation_name: "",
+      operation_description: "",
+      duration_minutes: 60,
+    });
+  };
+
+  const handleRemoveBomOperation = (operationIndex: number) => {
+    setBomOperations(bomOperations.filter((_, index) => index !== operationIndex));
+  };
+
   const handleSubmit = async () => {
     if (!selectedItem || !bomName || components.length === 0) {
       toast({
@@ -170,6 +254,7 @@ export default function NewBOMPage() {
           item_id: comp.item_id,
           quantity: comp.quantity,
         })),
+        operations: bomOperations,
       };
 
       const response = await fetch("/api/boms", {
@@ -419,15 +504,98 @@ export default function NewBOMPage() {
           </Card>
         </div>
 
+        {/* Add Operations */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Operations</CardTitle>
+              <CardDescription>
+                Define manufacturing operations for this BOM
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="operationName">Operation Name *</Label>
+                  <Input
+                    id="operationName"
+                    value={currentOperation.operation_name}
+                    onChange={(e) =>
+                      setCurrentOperation(prev => ({ ...prev, operation_name: e.target.value }))
+                    }
+                    placeholder="e.g., Assembly, Painting, Quality Check"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Select Work Center *</Label>
+                  <Select
+                    value={selectedWorkCenter?.id.toString() || ""}
+                    onValueChange={(value) => {
+                      const wc = workCenters.find(w => w.id.toString() === value);
+                      setSelectedWorkCenter(wc || null);
+                      setCurrentOperation(prev => ({ ...prev, work_center_id: wc ? wc.id : 0 }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose work center" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workCenters.map((wc) => (
+                        <SelectItem key={wc.id} value={wc.id.toString()}>
+                          {wc.name} ({wc.capacity_per_hour}/hr)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration (minutes) *</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="1"
+                    value={currentOperation.duration_minutes}
+                    onChange={(e) =>
+                      setCurrentOperation(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="operationDescription">Description (Optional)</Label>
+                  <Input
+                    id="operationDescription"
+                    value={currentOperation.operation_description}
+                    onChange={(e) =>
+                      setCurrentOperation(prev => ({ ...prev, operation_description: e.target.value }))
+                    }
+                    placeholder="Brief description of the operation"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleAddBomOperation}
+                className="w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Operation to BOM
+              </Button>
+            </CardContent>
+          </Card>
+
         {/* Components List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              BOM Components ({components.length})
+              Materials & Components ({components.length})
             </CardTitle>
             <CardDescription>
-              Materials and components required for this BOM
+              Raw materials and components required for this BOM
               {components.length > 0 && (
                 <span className="ml-2 font-medium">
                   Total Cost: ${totalCost.toFixed(2)}
@@ -445,36 +613,36 @@ export default function NewBOMPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {components.map((component, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium">{component.item_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {component.item_code} | {component.quantity}{" "}
-                        {component.unit} | $
-                        {(Number(component.rate) || 0).toFixed(2)} each
+                  <div key={index} className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{component.item_name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {component.item_code} | {component.quantity}{" "}
+                          {component.unit} | $
+                          {(Number(component.rate) || 0).toFixed(2)} each
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right mr-4">
-                      <div className="font-medium">
-                        $
-                        {(
-                          component.quantity * (Number(component.rate) || 0)
-                        ).toFixed(2)}
+                      <div className="text-right mr-4">
+                        <div className="font-medium">
+                          $
+                          {(
+                            component.quantity * (Number(component.rate) || 0)
+                          ).toFixed(2)}
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveComponent(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveComponent(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
                   </div>
                 ))}
 
@@ -488,6 +656,52 @@ export default function NewBOMPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* BOM Operations List */}
+        {bomOperations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Manufacturing Operations ({bomOperations.length})
+              </CardTitle>
+              <CardDescription>
+                Manufacturing process steps and work centers for this BOM
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {bomOperations.map((operation, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium">{operation.operation_name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {operation.work_center_name} | {operation.duration_minutes} mins
+                      </div>
+                      {operation.operation_description && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {operation.operation_description}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveBomOperation(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
       </div>
     </DashboardLayout>
   );
