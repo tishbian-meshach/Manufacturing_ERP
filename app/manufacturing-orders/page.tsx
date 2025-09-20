@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, Trash2, Loader2 } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -62,6 +64,7 @@ export default function ManufacturingOrdersPage() {
   const [filteredMOs, setFilteredMOs] = useState<ManufacturingOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [deletingOrder, setDeletingOrder] = useState<string | null>(null)
 
   useEffect(() => {
     fetchManufacturingOrders()
@@ -236,6 +239,7 @@ export default function ManufacturingOrdersPage() {
     }
 
     try {
+      setDeletingOrder(moNumber)
       const token = localStorage.getItem("erp_token")
 
       const response = await fetch("/api/manufacturing-orders", {
@@ -259,6 +263,8 @@ export default function ManufacturingOrdersPage() {
       alert(`Manufacturing Order ${moNumber} has been cancelled successfully.`)
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to cancel manufacturing order")
+    } finally {
+      setDeletingOrder(null)
     }
   }
 
@@ -370,10 +376,14 @@ export default function ManufacturingOrdersPage() {
                           size="sm"
                           className="text-red-600"
                           onClick={() => handleDeleteMO(mo.id, mo.mo_number)}
-                          disabled={mo.status !== 'draft'}
+                          disabled={mo.status !== 'draft' || deletingOrder === mo.mo_number}
                           title={mo.status !== 'draft' ? 'Cannot cancel MO that is in progress or completed' : 'Cancel Manufacturing Order'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingOrder === mo.mo_number ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>

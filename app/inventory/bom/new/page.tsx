@@ -94,14 +94,28 @@ export default function NewBOMPage() {
     duration_minutes: 60,
   });
   const [selectedWorkCenter, setSelectedWorkCenter] = useState<WorkCenter | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchItems();
-    fetchWorkCenters();
+    fetchInitialData();
   }, []);
+
+  const fetchInitialData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetchItems(),
+        fetchWorkCenters()
+      ]);
+    } catch (err) {
+      console.error("Error fetching initial data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchItems = async () => {
     try {
@@ -293,6 +307,19 @@ export default function NewBOMPage() {
     (sum, comp) => sum + comp.quantity * (Number(comp.rate) || 0),
     0
   );
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground">Loading BOM data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>

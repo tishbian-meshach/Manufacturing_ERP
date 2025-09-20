@@ -42,14 +42,27 @@ export default function NewManufacturingOrderPage() {
   const [boms, setBoms] = useState<BOM[]>([])
   const [selectedBOM, setSelectedBOM] = useState<BOM | null>(null)
   const [bomOperations, setBomOperations] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    fetchItems()
-    fetchBOMs()
+    fetchInitialData()
   }, [])
+
+  const fetchInitialData = async () => {
+    setIsLoading(true)
+    try {
+      await Promise.all([
+        fetchItems(),
+        fetchBOMs()
+      ])
+    } catch (err) {
+      console.error("Error fetching initial data:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
 
 
@@ -181,6 +194,19 @@ export default function NewManufacturingOrderPage() {
   }
 
   const availableBOMs = boms.filter((bom) => !formData.item_id || bom.item_id === parseInt(formData.item_id))
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground">Loading manufacturing order data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>

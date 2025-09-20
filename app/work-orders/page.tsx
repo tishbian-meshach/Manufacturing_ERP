@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, Play, Pause, CheckCircle, Clock, RefreshCw, Settings, RotateCcw } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -70,6 +72,7 @@ export default function WorkOrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filteredWOs, setFilteredWOs] = useState<WorkOrder[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
   useEffect(() => {
     fetchWorkOrders()
@@ -425,6 +428,7 @@ export default function WorkOrdersPage() {
 
   const handleStatusChange = async (woId: number, newStatus: string) => {
     try {
+      setUpdatingStatus(`${woId}-${newStatus}`)
       const token = localStorage.getItem("erp_token")
       const response = await fetch("/api/work-orders", {
         method: "PUT",
@@ -445,6 +449,8 @@ export default function WorkOrdersPage() {
     } catch (error) {
       console.error("Error updating work order status:", error)
       // You could add a toast notification here
+    } finally {
+      setUpdatingStatus(null)
     }
   }
 
@@ -710,8 +716,13 @@ export default function WorkOrdersPage() {
                             size="sm"
                             onClick={() => handleStatusChange(wo.id, "in_progress")}
                             className="text-blue-600"
+                            disabled={updatingStatus === `${wo.id}-in_progress`}
                           >
-                            <Play className="h-4 w-4" />
+                            {updatingStatus === `${wo.id}-in_progress` ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
                           </Button>
                         )}
                         {wo.status === "in_progress" && (
@@ -721,16 +732,26 @@ export default function WorkOrdersPage() {
                               size="sm"
                               onClick={() => handleStatusChange(wo.id, "completed")}
                               className="text-green-600"
+                              disabled={updatingStatus === `${wo.id}-completed`}
                             >
-                              <CheckCircle className="h-4 w-4" />
+                              {updatingStatus === `${wo.id}-completed` ? (
+                                <LoadingSpinner size="sm" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleStatusChange(wo.id, "on_hold")}
                               className="text-red-600"
+                              disabled={updatingStatus === `${wo.id}-on_hold`}
                             >
-                              <Pause className="h-4 w-4" />
+                              {updatingStatus === `${wo.id}-on_hold` ? (
+                                <LoadingSpinner size="sm" />
+                              ) : (
+                                <Pause className="h-4 w-4" />
+                              )}
                             </Button>
                           </>
                         )}
@@ -741,8 +762,13 @@ export default function WorkOrdersPage() {
                             onClick={() => handleStatusChange(wo.id, "in_progress")}
                             className="text-blue-600"
                             title="Resume work order"
+                            disabled={updatingStatus === `${wo.id}-in_progress`}
                           >
-                            <Play className="h-4 w-4" />
+                            {updatingStatus === `${wo.id}-in_progress` ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
                           </Button>
                         )}
                       </div>

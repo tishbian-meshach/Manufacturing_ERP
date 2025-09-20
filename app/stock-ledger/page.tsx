@@ -190,6 +190,19 @@ export default function StockLedgerPage() {
   const totalStockOut = Array.isArray(ledgerEntries) ? Math.abs(ledgerEntries.filter(entry => entry.actual_qty < 0).reduce((sum, entry) => sum + Number(entry.actual_qty), 0)) : 0
   const netMovement = totalStockIn - totalStockOut
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground">Loading stock ledger...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   const handleAddStock = async () => {
     if (!selectedItemId || !stockQuantity || !stockRate) {
       setError("All fields are required")

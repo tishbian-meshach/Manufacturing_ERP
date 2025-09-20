@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -290,7 +292,9 @@ export default function InventoryPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{loading ? <Loader2 className="h-6 w-6 animate-spin" /> : items.length}</div>
+              <div className="text-2xl font-bold">
+                {loading ? <LoadingSpinner size="md" /> : items.length}
+              </div>
               <p className="text-xs text-muted-foreground">Active inventory items</p>
             </CardContent>
           </Card>
@@ -301,7 +305,9 @@ export default function InventoryPage() {
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{totalValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {loading ? <Skeleton className="h-8 w-24" /> : `₹${totalValue.toLocaleString()}`}
+              </div>
               <p className="text-xs text-muted-foreground">Current inventory value</p>
             </CardContent>
           </Card>
@@ -312,7 +318,9 @@ export default function InventoryPage() {
               <AlertTriangle className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{lowStockItems.length}</div>
+              <div className="text-2xl font-bold">
+                {loading ? <LoadingSpinner size="md" /> : lowStockItems.length}
+              </div>
               <p className="text-xs text-muted-foreground">Items need attention</p>
             </CardContent>
           </Card>
@@ -324,7 +332,7 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : items.filter((item) => item.item_type === "raw_material").length}
+                {loading ? <LoadingSpinner size="md" /> : items.filter((item) => item.item_type === "raw_material").length}
               </div>
               <p className="text-xs text-muted-foreground">Raw material items</p>
             </CardContent>
@@ -375,8 +383,20 @@ export default function InventoryPage() {
             {/* Items Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Inventory Items ({filteredItems.length})</CardTitle>
-                <CardDescription>List of all inventory items with current stock levels</CardDescription>
+                <CardTitle>
+                  {loading ? (
+                    <Skeleton className="h-6 w-48" />
+                  ) : (
+                    `Inventory Items (${filteredItems.length})`
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  {loading ? (
+                    <Skeleton className="h-4 w-64" />
+                  ) : (
+                    "List of all inventory items with current stock levels"
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -394,48 +414,75 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.map((item) => {
-                      const stockStatus = getStockStatus(item.current_stock, item.item_type)
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.item_code}</TableCell>
+                    {loading ? (
+                      // Loading skeleton rows
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{item.item_name}</div>
-                              {item.description && (
-                                <div className="text-sm text-muted-foreground">{item.description}</div>
-                              )}
+                              <Skeleton className="h-4 w-32 mb-1" />
+                              <Skeleton className="h-3 w-48" />
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <Badge className={getItemTypeColor(item.item_type)}>
-                              {item.item_type.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className={stockStatus.color}>{item.current_stock.toLocaleString()}</TableCell>
-                          <TableCell>{item.unit_of_measure}</TableCell>
-                          <TableCell>₹{Number(item.standard_rate || 0).toFixed(2)}</TableCell>
-                          <TableCell>₹{(item.current_stock * Number(item.standard_rate || 0)).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={stockStatus.status === "good" ? "default" : "destructive"}>
-                              {stockStatus.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleAddStock(item)}
-                                title="Add stock to this item"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                          <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                         </TableRow>
-                      )
-                    })}
+                      ))
+                    ) : (
+                      filteredItems.map((item) => {
+                        const stockStatus = getStockStatus(item.current_stock, item.item_type)
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.item_code}</TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{item.item_name}</div>
+                                {item.description && (
+                                  <div className="text-sm text-muted-foreground">{item.description}</div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getItemTypeColor(item.item_type)}>
+                                {item.item_type.replace("_", " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={stockStatus.color}>{item.current_stock.toLocaleString()}</TableCell>
+                            <TableCell>{item.unit_of_measure}</TableCell>
+                            <TableCell>₹{Number(item.standard_rate || 0).toFixed(2)}</TableCell>
+                            <TableCell>₹{(item.current_stock * Number(item.standard_rate || 0)).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Badge variant={stockStatus.status === "good" ? "default" : "destructive"}>
+                                {stockStatus.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAddStock(item)}
+                                  title="Add stock to this item"
+                                  disabled={addingStock}
+                                >
+                                  {addingStock && selectedItem?.id === item.id ? (
+                                    <LoadingSpinner size="sm" />
+                                  ) : (
+                                    <Plus className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

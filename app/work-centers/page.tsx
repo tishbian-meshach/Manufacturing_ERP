@@ -19,6 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Search, Trash2, Factory, TrendingUp } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface WorkCenter {
   id: number
@@ -43,6 +45,7 @@ export default function WorkCentersPage() {
     description: "",
     capacity_per_hour: "",
   })
+  const [deletingWorkCenter, setDeletingWorkCenter] = useState<string | null>(null)
 
   useEffect(() => {
     fetchWorkCenters()
@@ -131,10 +134,10 @@ export default function WorkCentersPage() {
   }
 
   const activeWorkCenters = workCenters.filter((wc: WorkCenter) => wc.is_active)
-  const totalCapacity = activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + wc.capacity_per_hour, 0)
+  const totalCapacity = activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + Number(wc.capacity_per_hour || 0), 0)
   const averageUtilization =
     activeWorkCenters.length > 0
-      ? Math.round(activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.utilization_percentage || 0), 0) / activeWorkCenters.length)
+      ? Math.round(activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + Number(wc.utilization_percentage || 0), 0) / activeWorkCenters.length)
       : 0
 
 
@@ -144,6 +147,7 @@ export default function WorkCentersPage() {
     }
 
     try {
+      setDeletingWorkCenter(wc.name)
       const token = localStorage.getItem("erp_token")
       const response = await fetch("/api/workcenters", {
         method: "DELETE",
@@ -167,6 +171,8 @@ export default function WorkCentersPage() {
     } catch (error) {
       console.error("Error deleting work center:", error)
       alert(error instanceof Error ? error.message : "Failed to delete work center")
+    } finally {
+      setDeletingWorkCenter(null)
     }
   }
 
@@ -279,7 +285,7 @@ export default function WorkCentersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + (wc.running_work_orders || 0), 0)}
+                {activeWorkCenters.reduce((sum: number, wc: WorkCenter) => sum + Number(wc.running_work_orders || 0), 0)}
               </div>
               <p className="text-xs text-muted-foreground">active work orders</p>
             </CardContent>
@@ -331,16 +337,16 @@ export default function WorkCentersPage() {
                     <TableCell>{wc.capacity_per_hour} units</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={getUtilizationColor(wc.utilization_percentage || 0)}>{wc.utilization_percentage || 0}%</span>
+                        <span className={getUtilizationColor(Number(wc.utilization_percentage || 0))}>{Number(wc.utilization_percentage || 0)}%</span>
                         <div className="w-16 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${wc.utilization_percentage || 0}%` }}
+                            style={{ width: `${Number(wc.utilization_percentage || 0)}%` }}
                           ></div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{wc.running_work_orders || 0}</TableCell>
+                    <TableCell>{Number(wc.running_work_orders || 0)}</TableCell>
                     <TableCell>
                       <Badge variant={wc.is_active ? "default" : "secondary"}>
                         {wc.is_active ? "Active" : "Inactive"}
@@ -354,8 +360,13 @@ export default function WorkCentersPage() {
                           className="text-red-600"
                           onClick={() => handleDeleteWorkCenter(wc)}
                           title="Delete work center"
+                          disabled={deletingWorkCenter === wc.name}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingWorkCenter === wc.name ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>

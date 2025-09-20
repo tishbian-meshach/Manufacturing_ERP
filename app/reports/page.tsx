@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Download, Filter, Calendar, TrendingUp, Factory, Target, DollarSign } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 // State for real data from API
 export default function ReportsPage() {
@@ -21,6 +22,7 @@ export default function ReportsPage() {
   const [reportsData, setReportsData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [exporting, setExporting] = useState<string | null>(null)
 
   useEffect(() => {
     fetchReportsData()
@@ -56,6 +58,7 @@ export default function ReportsPage() {
 
   const handleExport = async (reportType: string) => {
     try {
+      setExporting(reportType)
       console.log(`Starting export for ${reportType}...`)
       const token = localStorage.getItem("erp_token")
 
@@ -107,11 +110,14 @@ export default function ReportsPage() {
       console.error(`Export ${reportType} report error:`, error)
       // You could show a toast notification here
       alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setExporting(null)
     }
   }
 
   const handleExportAll = async () => {
     try {
+      setExporting('all')
       console.log('Starting export for all reports...')
       const token = localStorage.getItem("erp_token")
 
@@ -162,6 +168,8 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Export all reports error:', error)
       alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setExporting(null)
     }
   }
 
@@ -220,9 +228,13 @@ export default function ReportsPage() {
               <Filter className="mr-2 h-4 w-4" />
               Filters
             </Button>
-            <Button variant="outline" onClick={handleExportAll}>
-              <Download className="mr-2 h-4 w-4" />
-              Export All
+            <Button variant="outline" onClick={handleExportAll} disabled={exporting === 'all'}>
+              {exporting === 'all' ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {exporting === 'all' ? 'Exporting...' : 'Export All'}
             </Button>
           </div>
         </div>
@@ -358,9 +370,13 @@ export default function ReportsPage() {
                     <CardTitle>Production Performance by Item</CardTitle>
                     <CardDescription>Planned vs actual production with efficiency metrics</CardDescription>
                   </div>
-                  <Button variant="outline" onClick={() => handleExport("production")}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Production
+                  <Button variant="outline" onClick={() => handleExport("production")} disabled={exporting === 'production'}>
+                    {exporting === 'production' ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {exporting === 'production' ? 'Exporting...' : 'Export Production'}
                   </Button>
                 </div>
               </CardHeader>
@@ -440,9 +456,13 @@ export default function ReportsPage() {
                     <CardTitle>Inventory Status Report</CardTitle>
                     <CardDescription>Current stock levels and turnover analysis</CardDescription>
                   </div>
-                  <Button variant="outline" onClick={() => handleExport("inventory")}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Inventory
+                  <Button variant="outline" onClick={() => handleExport("inventory")} disabled={exporting === 'inventory'}>
+                    {exporting === 'inventory' ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {exporting === 'inventory' ? 'Exporting...' : 'Export Inventory'}
                   </Button>
                 </div>
               </CardHeader>
@@ -497,9 +517,13 @@ export default function ReportsPage() {
                     <CardTitle>Work Center Efficiency Report</CardTitle>
                     <CardDescription>Utilization and output metrics by work center</CardDescription>
                   </div>
-                  <Button variant="outline" onClick={() => handleExport("efficiency")}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Efficiency
+                  <Button variant="outline" onClick={() => handleExport("efficiency")} disabled={exporting === 'efficiency'}>
+                    {exporting === 'efficiency' ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {exporting === 'efficiency' ? 'Exporting...' : 'Export Efficiency'}
                   </Button>
                 </div>
               </CardHeader>

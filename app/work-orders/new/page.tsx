@@ -62,15 +62,28 @@ export default function NewWorkOrderPage() {
   const [users, setUsers] = useState<User[]>([])
   const [workCenterAssignments, setWorkCenterAssignments] = useState<WorkCenterAssignment[]>([])
   const [availableWorkCenters, setAvailableWorkCenters] = useState<WorkCenterAssignment[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    fetchManufacturingOrders()
-    fetchWorkCenters()
-    fetchUsers()
+    fetchInitialData()
   }, [])
+
+  const fetchInitialData = async () => {
+    setIsLoading(true)
+    try {
+      await Promise.all([
+        fetchManufacturingOrders(),
+        fetchWorkCenters(),
+        fetchUsers()
+      ])
+    } catch (err) {
+      console.error("Error fetching initial data:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const fetchManufacturingOrders = async () => {
     try {
@@ -301,6 +314,19 @@ export default function NewWorkOrderPage() {
   }
 
   const selectedMO = manufacturingOrders.find((mo) => mo.id === parseInt(formData.manufacturing_order_id))
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground">Loading work order data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>

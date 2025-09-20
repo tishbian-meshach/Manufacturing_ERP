@@ -36,6 +36,8 @@ import {
   Package,
   ArrowLeft,
 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link";
 
 interface BOM {
@@ -68,6 +70,7 @@ export default function BOMPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoadingComponents, setIsLoadingComponents] = useState(false);
+  const [deletingBOM, setDeletingBOM] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBOMs();
@@ -134,6 +137,40 @@ export default function BOMPage() {
   const selectedBOMData = selectedBOM
     ? boms.find((b: BOM) => b.id === selectedBOM)
     : null;
+
+  const handleDeleteBOM = async (bomId: number, bomName: string) => {
+    if (!confirm(`Are you sure you want to delete BOM "${bomName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingBOM(bomName)
+      const token = localStorage.getItem("erp_token")
+      const response = await fetch(`/api/boms/${bomId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete BOM")
+      }
+
+      // Refresh the BOMs list
+      await fetchBOMs()
+
+      // Show success message
+      alert(`BOM "${bomName}" has been deleted successfully.`)
+    } catch (error) {
+      console.error("Error deleting BOM:", error)
+      alert(error instanceof Error ? error.message : "Failed to delete BOM")
+    } finally {
+      setDeletingBOM(null)
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -302,8 +339,14 @@ export default function BOMPage() {
                           variant="ghost"
                           size="sm"
                           className="text-red-600"
+                          onClick={() => handleDeleteBOM(bom.id, bom.bom_name)}
+                          disabled={deletingBOM === bom.bom_name}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingBOM === bom.bom_name ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
