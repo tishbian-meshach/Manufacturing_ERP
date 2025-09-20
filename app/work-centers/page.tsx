@@ -84,10 +84,43 @@ export default function WorkCentersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Creating work center:", formData)
-    // In production, make API call here
-    setIsDialogOpen(false)
-    setFormData({ name: "", description: "", capacity_per_hour: "" })
+
+    try {
+      const token = localStorage.getItem("erp_token")
+      const response = await fetch("/api/workcenters", {
+        method: "POST",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description || null,
+          capacity_per_hour: parseInt(formData.capacity_per_hour),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create work center")
+      }
+
+      const newWorkCenter = await response.json()
+      console.log("Work center created successfully:", newWorkCenter)
+
+      // Refresh the work centers list
+      await fetchWorkCenters()
+
+      // Reset form and close dialog
+      setIsDialogOpen(false)
+      setFormData({ name: "", description: "", capacity_per_hour: "" })
+
+      // Show success message
+      alert(`Work center "${newWorkCenter.name}" created successfully!`)
+    } catch (error) {
+      console.error("Error creating work center:", error)
+      alert(error instanceof Error ? error.message : "Failed to create work center")
+    }
   }
 
   const getUtilizationColor = (utilization: number) => {
