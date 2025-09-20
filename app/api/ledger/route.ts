@@ -9,37 +9,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    if (!authResult.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userCompanyId = authResult.user.companyId
     const { searchParams } = new URL(request.url)
     const product = searchParams.get("product")
     const dateRange = searchParams.get("dateRange")
 
-    let query = `
-      SELECT sl.*, p.name as product_name
-      FROM stock_ledger sl
-      LEFT JOIN products p ON sl.product_id = p.id
-    `
-
-    const conditions = []
-    const params = []
+    let whereConditions = [`sl.company_id = ${userCompanyId}`]
 
     if (product) {
-      conditions.push(`sl.product_id = $${params.length + 1}`)
-      params.push(product)
+      whereConditions.push(`sl.item_id = ${product}`)
     }
 
     if (dateRange) {
       const [startDate, endDate] = dateRange.split(",")
-      conditions.push(`sl.created_at BETWEEN $${params.length + 1} AND $${params.length + 2}`)
-      params.push(startDate, endDate)
+      whereConditions.push(`sl.created_at BETWEEN '${startDate}' AND '${endDate}'`)
     }
 
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(" AND ")}`
-    }
+    const whereClause = whereConditions.join(" AND ")
 
-    query += ` ORDER BY sl.created_at DESC LIMIT 100`
-
-    const result = await sql.unsafe(query, params)
+    const result = await sql`
+      SELECT sl.*, i.item_name as product_name, i.item_code
+      FROM stock_ledger sl
+      LEFT JOIN items i ON sl.item_id = i.id
+      WHERE ${sql.unsafe(whereClause)}
+      ORDER BY sl.created_at DESC
+      LIMIT 100
+    `
     return NextResponse.json(result)
   } catch (error) {
     console.error("Get ledger error:", error)

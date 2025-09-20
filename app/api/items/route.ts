@@ -20,11 +20,9 @@ export async function GET(request: NextRequest) {
     const items = await sql`
       SELECT
         i.*,
-        COALESCE(SUM(sl.actual_qty), 0) as current_stock
+        i.stock as current_stock
       FROM items i
-      LEFT JOIN stock_ledger sl ON i.id = sl.item_id AND sl.company_id = ${userCompanyId}
       WHERE i.company_id = ${userCompanyId} AND i.is_active = true
-      GROUP BY i.id
       ORDER BY i.item_code
     `
 

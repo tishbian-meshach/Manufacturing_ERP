@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { verifyAuth } from "@/lib/auth-middleware"
+import { updateItemStock } from "@/lib/stock"
 
 export async function GET(request: NextRequest) {
   try {
@@ -80,6 +81,65 @@ export async function POST(request: NextRequest) {
 
     const moId = newMO[0].id
     console.log(`Created MO with ID: ${moId}, Number: ${newMO[0].mo_number}`)
+
+    // If BOM is provided, deduct stock from BOM items and create stock ledger entries
+    if (bom_id) {
+      console.log(`Processing stock deduction for BOM ${bom_id} in MO ${moId}`)
+
+      // Get BOM items (components/materials needed)
+      const bomItems = await sql`
+        SELECT
+          bi.item_id,
+          bi.quantity as bom_quantity,
+          i.item_name,
+          i.item_code,
+          i.standard_rate,
+          i.stock as current_stock
+        FROM bom_items bi
+        JOIN items i ON bi.item_id = i.id
+        WHERE bi.bom_id = ${bom_id} AND bi.company_id = ${userCompanyId}
+      `
+
+      console.log(`Found ${bomItems.length} BOM items to process`)
+
+      // Process each BOM item for stock deduction
+      for (const bomItem of bomItems) {
+        // Calculate quantity to deduct: BOM quantity × MO planned quantity
+        const deductQuantity = bomItem.bom_quantity * planned_qty
+        console.log(`Processing ${bomItem.item_name}: BOM qty=${bomItem.bom_quantity}, MO qty=${planned_qty}, Deduct=${deductQuantity}`)
+
+        // Check if there's enough stock
+        if (bomItem.current_stock < deductQuantity) {
+          console.warn(`Insufficient stock for ${bomItem.item_name}: Available=${bomItem.current_stock}, Required=${deductQuantity}`)
+          // Continue processing but log the warning
+        }
+
+        // Calculate new stock level after deduction
+        const newStockLevel = Math.max(0, bomItem.current_stock - deductQuantity)
+
+        // Create stock ledger entry for stock consumption
+        const ledgerEntry = await sql`
+          INSERT INTO stock_ledger (
+            item_id, actual_qty,
+            qty_after_transaction, rate, value_after_transaction,
+            posting_date, posting_time, company_id, created_at
+          )
+          VALUES (
+            ${bomItem.item_id}, ${-deductQuantity},
+            ${newStockLevel}, ${bomItem.standard_rate}, ${newStockLevel * bomItem.standard_rate},
+            ${sql`CURRENT_DATE`}, ${sql`CURRENT_TIME`}, ${userCompanyId}, NOW()
+          )
+          RETURNING *
+        `
+
+        console.log(`Created stock ledger entry for ${bomItem.item_name}: Deducted ${deductQuantity} units`)
+
+        // Update the stock column in items table
+        await updateItemStock(bomItem.item_id, userCompanyId)
+      }
+
+      console.log(`Completed stock deduction for ${bomItems.length} items in MO ${moId}`)
+    }
 
     // If BOM is provided, create work orders based on BOM operations
     if (bom_id) {
