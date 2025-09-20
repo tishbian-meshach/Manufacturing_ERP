@@ -88,12 +88,7 @@ export default function BOMPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/inventory">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Inventory
-              </Button>
-            </Link>
+            
             <div>
               <h1 className="text-3xl font-bold">Bill of Materials (BOM)</h1>
               <p className="text-muted-foreground">Manage product component structures and recipes</p>

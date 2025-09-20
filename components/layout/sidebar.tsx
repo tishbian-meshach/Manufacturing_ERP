@@ -34,6 +34,7 @@ const navigation = [
   { name: "Work Orders", href: "/work-orders", icon: ClipboardList, roles: ["admin", "manager", "operator"] },
   { name: "Work Centers", href: "/work-centers", icon: Settings, roles: ["admin", "manager", "operator"] },
   { name: "Inventory", href: "/inventory", icon: Package, roles: ["admin", "manager", "operator"] },
+  { name: "BOM", href: "/inventory/bom", icon: Package, roles: ["admin", "manager", "operator"] },
   { name: "Reports", href: "/reports", icon: BarChart3, roles: ["admin", "manager"] },
   { name: "Analytics", href: "/analytics", icon: TrendingUp, roles: ["admin", "manager"] },
   { name: "Users", href: "/users", icon: Users, roles: ["admin"] },

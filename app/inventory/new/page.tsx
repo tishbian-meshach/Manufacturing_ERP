@@ -57,9 +57,13 @@ export default function NewItemPage() {
         standard_rate: parseFloat(formData.standard_rate),
       }
 
+      const token = localStorage.getItem("erp_token")
       const response = await fetch('/api/items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify(submitData)
       })
 
@@ -68,6 +72,10 @@ export default function NewItemPage() {
         throw new Error(errorData.error || "Failed to create item")
       }
 
+      const newItem = await response.json()
+      console.log("Item created successfully:", newItem)
+
+      // Show success message and redirect
       router.push("/inventory")
     } catch (error) {
       console.error("Error creating item:", error)

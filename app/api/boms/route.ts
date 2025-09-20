@@ -33,3 +33,48 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await verifyAuth(request)
+    if (!authResult.success) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!authResult.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userCompanyId = authResult.user.companyId
+    const { bom_name, item_id, quantity, components } = await request.json()
+
+    if (!bom_name || !item_id || !quantity || !components || components.length === 0) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 })
+    }
+
+    // Create BOM
+    const newBom = await sql`
+      INSERT INTO bom (bom_name, item_id, quantity, company_id, is_active, created_at, updated_at)
+      VALUES (${bom_name}, ${item_id}, ${quantity}, ${userCompanyId}, true, NOW(), NOW())
+      RETURNING id
+    `
+
+    const bomId = newBom[0].id
+
+    // Add BOM components
+    for (const component of components) {
+      await sql`
+        INSERT INTO bom_items (bom_id, item_id, quantity, company_id, created_at)
+        VALUES (${bomId}, ${component.item_id}, ${component.quantity}, ${userCompanyId}, NOW())
+      `
+    }
+
+    return NextResponse.json({
+      id: bomId,
+      message: "BOM created successfully"
+    })
+  } catch (error) {
+    console.error("Create BOM error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
