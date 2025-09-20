@@ -108,7 +108,7 @@ export function Header({ user }: HeaderProps) {
             className="relative h-8 w-8 rounded-full"
             onClick={() => handleAvatarDropdownChange(!avatarDropdownOpen)}
           >
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-8 w-8 bg-gray-100 border border-gray-300">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
             </Avatar>
           </Button>
