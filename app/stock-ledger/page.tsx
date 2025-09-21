@@ -16,6 +16,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { CalendarIcon, Search, TrendingUp, TrendingDown, Loader2, Plus, Package } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface LedgerEntry {
   id: number
@@ -191,17 +192,6 @@ export default function StockLedgerPage() {
   const totalStockOut = Array.isArray(ledgerEntries) ? Math.abs(ledgerEntries.filter(entry => entry.actual_qty < 0).reduce((sum, entry) => sum + Number(entry.actual_qty), 0)) : 0
   const netMovement = totalStockIn - totalStockOut
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-xl text-muted-foreground font-medium">Loading stock ledger data...</p>
-          <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch inventory transaction history</p>
-        </div>
-      </div>
-    )
-  }
 
   const handleAddStock = async () => {
     if (!selectedItemId || !stockQuantity || !stockRate) {
@@ -492,25 +482,42 @@ export default function StockLedgerPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry) => {
-                  const movement = getMovementType(entry.actual_qty)
-                  const MovementIcon = movement.icon
-                  return (
-                    <TableRow key={entry.id}>
-                      <TableCell>{format(new Date(entry.created_at), "PPP")}</TableCell>
-                      <TableCell className="font-medium">{entry.product_name} ({entry.item_code})</TableCell>
+                {loading ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell>
-                        <Badge className={movement.bgColor}>
-                          <MovementIcon className="mr-1 h-3 w-3" />
-                          {movement.type}
-                        </Badge>
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-1" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
                       </TableCell>
-                      <TableCell className={movement.color}>
-                        {entry.actual_qty > 0 ? "+" : ""}{Number(entry.actual_qty).toLocaleString()}
-                      </TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     </TableRow>
-                  )
-                })}
+                  ))
+                ) : (
+                  filteredEntries.map((entry) => {
+                    const movement = getMovementType(entry.actual_qty)
+                    const MovementIcon = movement.icon
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell>{format(new Date(entry.created_at), "PPP")}</TableCell>
+                        <TableCell className="font-medium">{entry.product_name} ({entry.item_code})</TableCell>
+                        <TableCell>
+                          <Badge className={movement.bgColor}>
+                            <MovementIcon className="mr-1 h-3 w-3" />
+                            {movement.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={movement.color}>
+                          {entry.actual_qty > 0 ? "+" : ""}{Number(entry.actual_qty).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </CardContent>

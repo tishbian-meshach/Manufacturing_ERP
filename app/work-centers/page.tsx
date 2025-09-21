@@ -330,48 +330,68 @@ export default function WorkCentersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWorkCenters.map((wc) => (
-                  <TableRow key={wc.id}>
-                    <TableCell className="font-medium">{wc.name}</TableCell>
-                    <TableCell>{wc.description}</TableCell>
-                    <TableCell>{wc.capacity_per_hour} units</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className={getUtilizationColor(Number(wc.utilization_percentage || 0))}>{Number(wc.utilization_percentage || 0)}%</span>
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${Number(wc.utilization_percentage || 0)}%` }}
-                          ></div>
+                {isLoading ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-12" />
+                          <Skeleton className="h-2 w-16" />
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{Number(wc.running_work_orders || 0)}</TableCell>
-                    <TableCell>
-                      <Badge variant={wc.is_active ? "default" : "secondary"}>
-                        {wc.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600"
-                          onClick={() => handleDeleteWorkCenter(wc)}
-                          title="Delete work center"
-                          disabled={deletingWorkCenter === wc.name}
-                        >
-                          {deletingWorkCenter === wc.name ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  filteredWorkCenters.map((wc) => (
+                    <TableRow key={wc.id}>
+                      <TableCell className="font-medium">{wc.name}</TableCell>
+                      <TableCell>{wc.description}</TableCell>
+                      <TableCell>{wc.capacity_per_hour} units</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className={getUtilizationColor(Number(wc.utilization_percentage || 0))}>{Number(wc.utilization_percentage || 0)}%</span>
+                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${Number(wc.utilization_percentage || 0)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{Number(wc.running_work_orders || 0)}</TableCell>
+                      <TableCell>
+                        <Badge variant={wc.is_active ? "default" : "secondary"}>
+                          {wc.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600"
+                            onClick={() => handleDeleteWorkCenter(wc)}
+                            title="Delete work center"
+                            disabled={deletingWorkCenter === wc.name}
+                          >
+                            {deletingWorkCenter === wc.name ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

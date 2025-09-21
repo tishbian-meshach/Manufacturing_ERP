@@ -307,51 +307,71 @@ export default function BOMPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBOMs.map((bom) => (
-                  <TableRow key={bom.id}>
-                    <TableCell className="font-medium">
-                      {bom.bom_name}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{bom.item_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {bom.item_code}
+                {isLoading ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell>
+                        <div>
+                          <Skeleton className="h-4 w-28 mb-1" />
+                          <Skeleton className="h-3 w-16" />
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{bom.quantity}</TableCell>
-                    <TableCell>
-                      {bom.actual_components_count || bom.components_count || 0}{" "}
-                      items
-                    </TableCell>
-                    <TableCell>
-                      ₹{Number(bom.total_cost || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={bom.is_active ? "default" : "secondary"}>
-                        {bom.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600"
-                          onClick={() => handleDeleteBOM(bom.id, bom.bom_name)}
-                          disabled={deletingBOM === bom.bom_name}
-                        >
-                          {deletingBOM === bom.bom_name ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  filteredBOMs.map((bom) => (
+                    <TableRow key={bom.id}>
+                      <TableCell className="font-medium">
+                        {bom.bom_name}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{bom.item_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {bom.item_code}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{bom.quantity}</TableCell>
+                      <TableCell>
+                        {bom.actual_components_count || bom.components_count || 0}{" "}
+                        items
+                      </TableCell>
+                      <TableCell>
+                        ₹{Number(bom.total_cost || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={bom.is_active ? "default" : "secondary"}>
+                          {bom.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600"
+                            onClick={() => handleDeleteBOM(bom.id, bom.bom_name)}
+                            disabled={deletingBOM === bom.bom_name}
+                          >
+                            {deletingBOM === bom.bom_name ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

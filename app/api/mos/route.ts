@@ -42,7 +42,13 @@ export async function GET(request: NextRequest) {
 
     query += ` GROUP BY mo.id, p.name, u.name ORDER BY mo.created_at DESC`
 
-    const result = await sql.unsafe(query, params)
+    // Interpolate parameters into the query
+    let finalQuery = query
+    params.forEach((param, index) => {
+      finalQuery = finalQuery.replace(new RegExp(`\\$${index + 1}`, 'g'), `'${param}'`)
+    })
+
+    const result = await sql.unsafe(finalQuery)
     return NextResponse.json(result)
   } catch (error) {
     console.error("Get MOs error:", error)

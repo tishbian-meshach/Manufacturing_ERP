@@ -592,189 +592,223 @@ export default function WorkOrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWOs.map((wo) => (
-                  <TableRow key={wo.id}>
-                    <TableCell className="font-medium">{wo.wo_number}</TableCell>
-                    <TableCell>
-                      <Link href={`/manufacturing-orders/${wo.mo_number}`} className="text-blue-600 hover:underline">
-                        {wo.mo_number}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{wo.operation_name}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div>{wo.work_center_name}</div>
-                        {wo.capacity_per_hour && (
-                          <div className="text-xs text-muted-foreground">
-                            {wo.capacity_per_hour}/hr capacity
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{wo.item_name}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="text-sm font-medium mb-1">
-                          {wo.completed_qty} / {wo.planned_qty}
+                {isLoading ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell>
+                        <div>
+                          <Skeleton className="h-4 w-24 mb-1" />
+                          <Skeleton className="h-3 w-20" />
                         </div>
-                        {(() => {
-                          const progress = calculateRealisticProgress(wo)
-                          return (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="cursor-help">
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                      <div
-                                        className={`h-2 rounded-full transition-all duration-300 ${
-                                          progress.shouldAutoComplete ? 'bg-green-500 animate-pulse' :
-                                          progress.percentage >= 100 ? 'bg-green-500' :
-                                          progress.percentage >= 70 ? 'bg-blue-500' :
-                                          progress.percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                                        }`}
-                                        style={{ width: `${progress.percentage}%` }}
-                                      ></div>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground mt-1 text-center">
-                                      {progress.percentage}% complete
-                                      {progress.shouldAutoComplete && (
-                                        <div className="text-green-600 font-medium text-xs">
-                                          Auto-completing...
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="space-y-2">
-                                    <div className="font-medium">Progress Calculation</div>
-                                    <div className="text-sm space-y-1">
-                                      <div><strong>Work Center Capacity:</strong> {wo.capacity_per_hour}/hr</div>
-                                      <div><strong>Required Quantity:</strong> {wo.planned_qty} units</div>
-
-                                      {wo.capacity_per_hour && (
-                                        <>
-                                          <div><strong>Time per Unit:</strong> {Math.round((60 / wo.capacity_per_hour) * 100) / 100} minutes</div>
-                                          <div><strong>Total Time Required:</strong> {Math.round((wo.planned_qty * (60 / wo.capacity_per_hour)) * 100) / 100} minutes</div>
-                                        </>
-                                      )}
-
-                                      <div className="border-t pt-1 mt-2">
-                                        <div><strong>Current Progress:</strong> {progress.percentage}%</div>
-                                        <div><strong>Completed:</strong> {wo.completed_qty} / {wo.planned_qty}</div>
-
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell>
+                        <div>
+                          <Skeleton className="h-4 w-16 mb-2" />
+                          <Skeleton className="h-2 w-full" />
+                          <Skeleton className="h-3 w-20 mt-1" />
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell>
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-1" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  filteredWOs.map((wo) => (
+                    <TableRow key={wo.id}>
+                      <TableCell className="font-medium">{wo.wo_number}</TableCell>
+                      <TableCell>
+                        <Link href={`/manufacturing-orders/${wo.mo_number}`} className="text-blue-600 hover:underline">
+                          {wo.mo_number}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{wo.operation_name}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{wo.work_center_name}</div>
+                          {wo.capacity_per_hour && (
+                            <div className="text-xs text-muted-foreground">
+                              {wo.capacity_per_hour}/hr capacity
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{wo.item_name}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="text-sm font-medium mb-1">
+                            {wo.completed_qty} / {wo.planned_qty}
+                          </div>
+                          {(() => {
+                            const progress = calculateRealisticProgress(wo)
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="cursor-help">
+                                      <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                          className={`h-2 rounded-full transition-all duration-300 ${
+                                            progress.shouldAutoComplete ? 'bg-green-500 animate-pulse' :
+                                            progress.percentage >= 100 ? 'bg-green-500' :
+                                            progress.percentage >= 70 ? 'bg-blue-500' :
+                                            progress.percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                                          }`}
+                                          style={{ width: `${progress.percentage}%` }}
+                                        ></div>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground mt-1 text-center">
+                                        {progress.percentage}% complete
                                         {progress.shouldAutoComplete && (
-                                          <div className="text-green-600 font-medium">
-                                            ⚡ Auto-completion will be triggered
+                                          <div className="text-green-600 font-medium text-xs">
+                                            Auto-completing...
                                           </div>
-                                        )}
-
-                                        {progress.expectedCompletionTime && (
-                                          <div><strong>Expected Completion:</strong> {progress.expectedCompletionTime.toLocaleString()}</div>
-                                        )}
-
-                                        {progress.timeRemaining !== null && (
-                                          <div><strong>Time Remaining:</strong> {formatTimeRemaining(progress.timeRemaining)}</div>
-                                        )}
-
-                                        {progress.timeElapsed > 0 && (
-                                          <div><strong>Time Elapsed:</strong> {formatTimeElapsed(progress.timeElapsed)}</div>
                                         )}
                                       </div>
                                     </div>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )
-                        })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(wo.status)}>
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(wo.status)}
-                          {wo.status.replace("_", " ")}
-                        </span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{wo.assigned_user_name || "Unassigned"}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {wo.actual_start_time && <div className="font-medium">Actual Start: {new Date(wo.actual_start_time).toLocaleString()}</div>}
-                        {wo.actual_end_time && <div className="font-medium">Actual End: {new Date(wo.actual_end_time).toLocaleString()}</div>}
-                        {wo.planned_start_time && !wo.actual_start_time && <div>Planned Start: {new Date(wo.planned_start_time).toLocaleString()}</div>}
-                        {wo.planned_end_time && !wo.actual_end_time && <div>Planned End: {new Date(wo.planned_end_time).toLocaleString()}</div>}
-                        {!wo.planned_start_time && !wo.actual_start_time && <div className="text-muted-foreground">Not scheduled</div>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {wo.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleStatusChange(wo.id, "in_progress")}
-                            className="text-blue-600"
-                            disabled={updatingStatus === `${wo.id}-in_progress`}
-                          >
-                            {updatingStatus === `${wo.id}-in_progress` ? (
-                              <LoadingSpinner size="sm" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                        {wo.status === "in_progress" && (
-                          <>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="space-y-2">
+                                      <div className="font-medium">Progress Calculation</div>
+                                      <div className="text-sm space-y-1">
+                                        <div><strong>Work Center Capacity:</strong> {wo.capacity_per_hour}/hr</div>
+                                        <div><strong>Required Quantity:</strong> {wo.planned_qty} units</div>
+
+                                        {wo.capacity_per_hour && (
+                                          <>
+                                            <div><strong>Time per Unit:</strong> {Math.round((60 / wo.capacity_per_hour) * 100) / 100} minutes</div>
+                                            <div><strong>Total Time Required:</strong> {Math.round((wo.planned_qty * (60 / wo.capacity_per_hour)) * 100) / 100} minutes</div>
+                                          </>
+                                        )}
+
+                                        <div className="border-t pt-1 mt-2">
+                                          <div><strong>Current Progress:</strong> {progress.percentage}%</div>
+                                          <div><strong>Completed:</strong> {wo.completed_qty} / {wo.planned_qty}</div>
+
+                                          {progress.shouldAutoComplete && (
+                                            <div className="text-green-600 font-medium">
+                                              ⚡ Auto-completion will be triggered
+                                            </div>
+                                          )}
+
+                                          {progress.expectedCompletionTime && (
+                                            <div><strong>Expected Completion:</strong> {progress.expectedCompletionTime.toLocaleString()}</div>
+                                          )}
+
+                                          {progress.timeRemaining !== null && (
+                                            <div><strong>Time Remaining:</strong> {formatTimeRemaining(progress.timeRemaining)}</div>
+                                          )}
+
+                                          {progress.timeElapsed > 0 && (
+                                            <div><strong>Time Elapsed:</strong> {formatTimeElapsed(progress.timeElapsed)}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(wo.status)}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(wo.status)}
+                            {wo.status.replace("_", " ")}
+                          </span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{wo.assigned_user_name || "Unassigned"}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {wo.actual_start_time && <div className="font-medium">Actual Start: {new Date(wo.actual_start_time).toLocaleString()}</div>}
+                          {wo.actual_end_time && <div className="font-medium">Actual End: {new Date(wo.actual_end_time).toLocaleString()}</div>}
+                          {wo.planned_start_time && !wo.actual_start_time && <div>Planned Start: {new Date(wo.planned_start_time).toLocaleString()}</div>}
+                          {wo.planned_end_time && !wo.actual_end_time && <div>Planned End: {new Date(wo.planned_end_time).toLocaleString()}</div>}
+                          {!wo.planned_start_time && !wo.actual_start_time && <div className="text-muted-foreground">Not scheduled</div>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {wo.status === "pending" && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleStatusChange(wo.id, "completed")}
-                              className="text-green-600"
-                              disabled={updatingStatus === `${wo.id}-completed`}
+                              onClick={() => handleStatusChange(wo.id, "in_progress")}
+                              className="text-blue-600"
+                              disabled={updatingStatus === `${wo.id}-in_progress`}
                             >
-                              {updatingStatus === `${wo.id}-completed` ? (
+                              {updatingStatus === `${wo.id}-in_progress` ? (
                                 <LoadingSpinner size="sm" />
                               ) : (
-                                <CheckCircle className="h-4 w-4" />
+                                <Play className="h-4 w-4" />
                               )}
                             </Button>
+                          )}
+                          {wo.status === "in_progress" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleStatusChange(wo.id, "completed")}
+                                className="text-green-600"
+                                disabled={updatingStatus === `${wo.id}-completed`}
+                              >
+                                {updatingStatus === `${wo.id}-completed` ? (
+                                  <LoadingSpinner size="sm" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleStatusChange(wo.id, "on_hold")}
+                                className="text-red-600"
+                                disabled={updatingStatus === `${wo.id}-on_hold`}
+                              >
+                                {updatingStatus === `${wo.id}-on_hold` ? (
+                                  <LoadingSpinner size="sm" />
+                                ) : (
+                                  <Pause className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </>
+                          )}
+                          {wo.status === "on_hold" && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleStatusChange(wo.id, "on_hold")}
-                              className="text-red-600"
-                              disabled={updatingStatus === `${wo.id}-on_hold`}
+                              onClick={() => handleStatusChange(wo.id, "in_progress")}
+                              className="text-blue-600"
+                              title="Resume work order"
+                              disabled={updatingStatus === `${wo.id}-in_progress`}
                             >
-                              {updatingStatus === `${wo.id}-on_hold` ? (
+                              {updatingStatus === `${wo.id}-in_progress` ? (
                                 <LoadingSpinner size="sm" />
                               ) : (
-                                <Pause className="h-4 w-4" />
+                                <Play className="h-4 w-4" />
                               )}
                             </Button>
-                          </>
-                        )}
-                        {wo.status === "on_hold" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleStatusChange(wo.id, "in_progress")}
-                            className="text-blue-600"
-                            title="Resume work order"
-                            disabled={updatingStatus === `${wo.id}-in_progress`}
-                          >
-                            {updatingStatus === `${wo.id}-in_progress` ? (
-                              <LoadingSpinner size="sm" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
