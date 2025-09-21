@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { CalendarIcon, Search, TrendingUp, TrendingDown, Loader2, Plus, Package } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -460,50 +461,16 @@ export default function StockLedgerPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !dateFrom && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "PPP") : "From date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={setDateFrom}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !dateTo && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PPP") : "To date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={setDateTo}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DateTimePicker
+                date={dateFrom}
+                onDateChange={setDateFrom}
+                placeholder="From date and time"
+              />
+              <DateTimePicker
+                date={dateTo}
+                onDateChange={setDateTo}
+                placeholder="To date and time"
+              />
             </div>
           </CardContent>
         </Card>

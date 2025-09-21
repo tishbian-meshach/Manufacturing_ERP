@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { ArrowLeft, Save, Loader2, Settings } from "lucide-react"
 import Link from "next/link"
 
@@ -305,24 +306,30 @@ export default function NewManufacturingOrderPage() {
                 {/* Planned Start Date */}
                 <div className="space-y-2">
                   <Label htmlFor="planned_start_date">Planned Start Date</Label>
-                  <Input
-                    id="planned_start_date"
-                    name="planned_start_date"
-                    type="date"
-                    value={formData.planned_start_date}
-                    onChange={handleInputChange}
+                  <DateTimePicker
+                    date={formData.planned_start_date ? new Date(formData.planned_start_date) : undefined}
+                    onDateChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        planned_start_date: date ? date.toISOString().split('T')[0] : "",
+                      }))
+                    }}
+                    placeholder="Select start date and time"
                   />
                 </div>
 
                 {/* Planned End Date */}
                 <div className="space-y-2">
                   <Label htmlFor="planned_end_date">Planned End Date</Label>
-                  <Input
-                    id="planned_end_date"
-                    name="planned_end_date"
-                    type="date"
-                    value={formData.planned_end_date}
-                    onChange={handleInputChange}
+                  <DateTimePicker
+                    date={formData.planned_end_date ? new Date(formData.planned_end_date) : undefined}
+                    onDateChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        planned_end_date: date ? date.toISOString().split('T')[0] : "",
+                      }))
+                    }}
+                    placeholder="Select end date and time"
                   />
                 </div>
               </div>

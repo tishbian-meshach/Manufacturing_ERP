@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { ArrowLeft, Save, Loader2, CheckCircle, Clock, Lock, Zap, Play } from "lucide-react"
 import Link from "next/link"
 
@@ -500,24 +501,30 @@ export default function NewWorkOrderPage() {
                 {/* Planned Start Time */}
                 <div className="space-y-2">
                   <Label htmlFor="planned_start_time">Planned Start Time</Label>
-                  <Input
-                    id="planned_start_time"
-                    name="planned_start_time"
-                    type="datetime-local"
-                    value={formData.planned_start_time}
-                    onChange={handleInputChange}
+                  <DateTimePicker
+                    date={formData.planned_start_time ? new Date(formData.planned_start_time) : undefined}
+                    onDateChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        planned_start_time: date ? date.toISOString() : "",
+                      }))
+                    }}
+                    placeholder="Select start date and time"
                   />
                 </div>
 
                 {/* Planned End Time */}
                 <div className="space-y-2">
                   <Label htmlFor="planned_end_time">Planned End Time</Label>
-                  <Input
-                    id="planned_end_time"
-                    name="planned_end_time"
-                    type="datetime-local"
-                    value={formData.planned_end_time}
-                    onChange={handleInputChange}
+                  <DateTimePicker
+                    date={formData.planned_end_time ? new Date(formData.planned_end_time) : undefined}
+                    onDateChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        planned_end_time: date ? date.toISOString() : "",
+                      }))
+                    }}
+                    placeholder="Select end date and time"
                   />
                 </div>
 

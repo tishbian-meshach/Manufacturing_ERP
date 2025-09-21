@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from "recharts"
@@ -257,20 +258,28 @@ export default function ReportsPage() {
             <div className="flex gap-4 items-end">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={dateRange.startDate}
-                  onChange={(e) => setDateRange((prev) => ({ ...prev, startDate: e.target.value }))}
+                <DateTimePicker
+                  date={dateRange.startDate ? new Date(dateRange.startDate) : undefined}
+                  onDateChange={(date) => {
+                    setDateRange((prev) => ({
+                      ...prev,
+                      startDate: date ? date.toISOString().split('T')[0] : "",
+                    }))
+                  }}
+                  placeholder="Select start date and time"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={dateRange.endDate}
-                  onChange={(e) => setDateRange((prev) => ({ ...prev, endDate: e.target.value }))}
+                <DateTimePicker
+                  date={dateRange.endDate ? new Date(dateRange.endDate) : undefined}
+                  onDateChange={(date) => {
+                    setDateRange((prev) => ({
+                      ...prev,
+                      endDate: date ? date.toISOString().split('T')[0] : "",
+                    }))
+                  }}
+                  placeholder="Select end date and time"
                 />
               </div>
               <Button>Apply Filter</Button>
